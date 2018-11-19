@@ -89,6 +89,8 @@ DELETE /*
 
 ![](https://gtw.oss-cn-shanghai.aliyuncs.com/es/es%E6%98%A0%E5%B0%84.png)
 
+<font color="blue">index下type结构设计最佳实践:同一index下会对type结构做合并操作，所以应该将相似结构的type放在同一index下。如果两个type的field完全不相同，放在同一index下，那么在底层存储时每条记录至少一半的field在Lucene中是空值，会严重影响性能。</font>
+
 ###创建映射
 
 ```json
