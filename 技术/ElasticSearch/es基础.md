@@ -1,6 +1,6 @@
 [TOC]
 
-##索引操作
+## 索引操作
 
 ### 索引初始化
 
@@ -46,7 +46,7 @@ GET /_all
 GET /my_index
 ```
 
-###索引的配置修改 
+### 索引的配置修改 
 
 ```json
 PUT /my_temp_index/_settings
@@ -72,11 +72,11 @@ DELETE /*
 
 
 
-##mapping映射管理
+## mapping映射管理
 
 创建索引的时候，预先定义字段类型及属性（创建在_type上） 
 
-###内置类型
+### 内置类型
 
 - String: `text`会进行分析，`keyword`不会建立倒排索引不会进行分析
 - 数字类型：`long`,`integer`,`short`,`byte`,`double`,`float`
@@ -91,7 +91,7 @@ DELETE /*
 
 <font color="blue">index下type结构设计最佳实践:同一index下会对type结构做合并操作，所以应该将相似结构的type放在同一index下。如果两个type的field完全不相同，放在同一index下，那么在底层存储时每条记录至少一半的field在Lucene中是空值，会严重影响性能。</font>
 
-###创建映射
+### 创建映射
 
 ```json
 PUT /lagou
@@ -161,7 +161,7 @@ PUT /lagou/_mapping/job
 
 
 
-##文档CRUD
+## 文档CRUD
 
 ### 创建文档
 
@@ -272,7 +272,7 @@ DELETE /website/blog/123
 
 
 
-##mget、bulk批量操作
+## mget、bulk批量操作
 
 ### 批量查询
 
@@ -372,7 +372,7 @@ POST /website/log/_bulk
 
 
 
-##查询
+## 查询
 
 ```shell
 $ curl -X GET "localhost:9200/website/blog/123?pretty"
@@ -396,7 +396,7 @@ Content-Type: text/plain; charset=UTF-8
 Content-Length: 0
 ```
 
-###基本查询：使用es内置查询条件查询
+### 基本查询：使用es内置查询条件查询
 
 一个查询语句的典型结构：
 
@@ -615,7 +615,7 @@ GET /_search
 
 ```
 
-###过滤查询：查询同时，通过filter不影响打分的情况下筛选数据
+### 过滤查询：查询同时，通过filter不影响打分的情况下筛选数据
 
 ```json
 GET /test/test/_search
@@ -634,7 +634,7 @@ GET /test/test/_search
 }
 ```
 
-###组合查询： 多个查询组合在一起复合查询
+### 组合查询： 多个查询组合在一起复合查询
 
 ==倒排索引源于应用中需要根据属性值来查找记录，索引表中每一项包括一个属性值和具有该属性值的各记录的地址。由于不是由记录确定属性值，而是由属性值确定记录的位置，因而称为倒排索引。==
 
@@ -818,7 +818,7 @@ GET /_analyze
 
 `completion`提供自动完成/搜索功能，可以在用户输入时引导用户查看相关结果，从而提高搜索精度。理想情况下，自动完成功能应该与用户键入的速度一样快，以提供与用户输入内容相关的即时反馈。因此，`completion`建议器针对速度进行了优化。搜索建议能够快速查找的数据结构，但构建成本高并且存储在内存中。
 
-###设置`completion`类型的mapping
+### 设置`completion`类型的mapping
 
 ```json
 PUT music
@@ -870,7 +870,7 @@ PUT music/song/1?refresh
 }
 ```
 
-###suggest查询
+### suggest查询
 
 suggest查询主要用于输入补全，可纠错。
 
