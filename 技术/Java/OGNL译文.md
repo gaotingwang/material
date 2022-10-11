@@ -266,7 +266,6 @@ listeners.{delegate}
 
 ```java
 objects.{ #this instanceof String ? #this : #this.toString()}
-1
 ```
 
   上面会创建一个新的集合，它的元素都是`objects`集合元素的字符串形式。
