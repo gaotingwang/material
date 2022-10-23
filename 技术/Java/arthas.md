@@ -566,8 +566,10 @@ redefine success, size: 1
 
 ## 退出
 
-用 `exit` 或者 `quit` 命令可以退出Arthas。
+用 `exit` 或者 `quit` 命令可以退出Arthas。 
 
 退出Arthas之后，还可以再次用 `java -jar arthas-boot.jar` 来连接。
 
 `exit/quit`命令只是退出当前session，arthas server还在目标进程中运行。想完全退出Arthas，可以执行 `stop` 命令。
+
+![arth](./arth.png)
