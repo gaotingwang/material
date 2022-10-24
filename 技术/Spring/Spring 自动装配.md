@@ -116,63 +116,6 @@ public @interface ConditionalOnClass {
 
 
 
-reactor = jdk8 stream + jdk9 reactive stream
-
-
-
-服务事件发送 server-sent events 适用于服务器向前端推送数据的场景:
-
-后台：
-
-1. 需要设置响应的`Content-Type="text/event-stream"`
-
-2. 设置编码类型`CharacterEncoding=utf-8`
-
-3. 返回内容
-
-   - 指定事件标识：`event:${eventName}\n`
-
-   - 事件内容：
-
-     格式：data + 数据内容 + 2个回车
-
-     栗子：`data:${dataContent}\n\n`
-4. 刷新内容 `response.getWrite().flush()`
-
-前端：
-
-```js
-// 依赖H5
-var sse = new EventSource("SSE"); // 传入请求地址url
-
-sse.onmessage = function(e){
-    console.log("message:", e.data, e);
-}
-
-sse.addEventListener("${eventName}", function(e){
-    console.log("listen event:", e.data);
-    // 满足条件后断开，否则会继续重连
-    if(e.data == 3) {
-        sse.close();
-    }
-});
-```
-
-![spring reactor](https://gtw.oss-cn-shanghai.aliyuncs.com/Spring/spring-reactor.jpeg)
-
-Router Functions 开发模式
-
-开发过程：
-
-1. HandlerFunction(输入ServerRequest, 返回ServerResponse)
-2. RouterFunction(请求URL 和 HandlerFunction 对应起来)
-3. HttpHandler
-4. 交给Server（Netty或Servlet3.1）处理
-
-响应式在网页请求下，看到差别并不是很大，它更多适用于服务器之间的rest调用，异步非阻塞特性才能更好的呈现出来，更有价值
-
-
-
 
 
 
