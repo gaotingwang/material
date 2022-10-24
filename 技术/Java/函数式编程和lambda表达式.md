@@ -179,7 +179,7 @@ Stream 是一个高级的迭代器，不是一个数据结构，不是一个集�
 
 Java9引入的概念，响应式流，与8中的Stream没有任何关联
 
-### 背压 backprase
+### 背压 Backpressure
 
 是一个交互反馈，发布者与订阅者的互动，订阅者可以告诉发布者需要多少数据，起到调节数据流量作用
 
@@ -193,6 +193,65 @@ Flow :
 - `Processor<T,R>`：Publisher和Subscriber的结合体，起承上启下作用
 
 响应式流，主要是在消费到一条数据时，根据条件来决定继续消费`subscription.request(long n)`控制消费频率，还是取消消费`subscription.cancel()`
+
+```java
+// 1. 创建发布者
+SubmissionPublisher<Integer> publisher = new SubmissionPublisher<>();
+
+// 2. 创建订阅者
+Subscriber<Integer> subscriber = new Subscriber<>() {
+    private Subscription subscription;
+
+    @Override
+    public void onSubscribe(Subscription subscription) {
+        this.subscription = subscription;
+        this.subscription.request(1L);
+    }
+
+    @Override
+    public void onNext(Integer integer) {
+        System.out.println(Thread.currentThread().getName() + " --> 消费内容：" + integer);
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        subscription.request(1L);
+    }
+
+    @Override
+    public void onError(Throwable throwable) {
+        log.error("消费异常", throwable);
+        subscription.cancel();
+    }
+
+    @Override
+    public void onComplete() {
+        // 数据全部处理完毕，发布者关闭
+        System.out.println(Thread.currentThread().getName() + " --> 消费全部处理完毕");
+    }
+};
+
+// 3. 建立订阅关系
+publisher.subscribe(subscriber);
+
+// 4. 生产数据并发布
+for (int i = 0; i < 500; i++) {
+    // submit是个block方法
+    // 当subscription中缓冲池满了后，此方法会被阻塞来等待缓冲池中可以放入数据，来达到可以控制发布者生产的速度
+    publisher.submit(i);
+    System.out.println(Thread.currentThread().getName() + " --> 准备数据:" + i);
+}
+
+// 5. 结束后，关闭发布者
+publisher.close();
+```
+
+
+
+### 总结
+
+Reactive Programming 作为观察者（Observer）的延伸，不同于传统的命令编程方式（Imperative programming）同步拉取数据的方式，如迭代器模式（Iterator）。而是采用数据发布者同步或异步地推送到数据流（Data Streams）的方案。当该数据流订阅者监听到传播变化时，立即作出响应动作。在实现层面上，Reactive Programming可**结合函数式编程简化面向对象语言语法的臃肿性，屏蔽并发实现的复杂细节，提供数据流的有序操作，从而达到提升代码的可读性，以及减少Bug出现的目的。同时，Reactive Programming结合背压（Backpressure）的技术解决发布生成数据的速率高于订阅端消费的问题**。
 
 
 
