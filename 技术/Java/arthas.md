@@ -27,6 +27,8 @@ java -jar arthas-boot.jar --target-ip
 
 ### dashboard 命令可以查看当前系统的实时数据面板
 
+可以概览程序的**线程、内存、GC、运行环境**信息
+
 ```shell
 [arthas@163]$ dashboard
 ID  NAME                     GROUP        PRIORIT STATE   %CPU     DELTA_T TIME    INTERRUP DAEMON  
@@ -322,7 +324,7 @@ Affect(row-cnt:6) cost in 607 ms.
 
 需要一个 `-s` 参数。同样的，搜索表达式的核心对象依旧是 `Advice` 对象。
 
-#### 查看调用信息查看调用信息
+#### 查看调用信息
 
 对于具体一个时间片的信息而言，可以通过 `-i` 参数后边跟着对应的 `INDEX` 编号查看到他的详细信息。
 
@@ -488,7 +490,7 @@ Affect(class-cnt:1 , method-cnt:1) cost in 96 ms.
 **使用 & 指定命令去后台运行**，使用 > 将结果重写到日志文件，以trace为例
 
 ```shell
-[arthas@79952]$ trace -j cn.test.mobile.controller.order.OrderController getOrderInfo > test.out &
+[arthas@79952]$ trace cn.test.mobile.controller.order.OrderController getOrderInfo > test.out &
 ```
 
 `jobs`——列出所有异步job：
@@ -496,7 +498,7 @@ Affect(class-cnt:1 , method-cnt:1) cost in 96 ms.
 ```shell
 [arthas@79952]$ jobs
 [76]*  
-       Running           trace -j cn.test.mobile.controller.order.OrderController getOrderInfo >> test.out &
+       Running           trace cn.test.mobile.controller.order.OrderController getOrderInfo >> test.out &
        execution count : 0
        start time      : Wed Nov 13 16:13:23 CST 2019
        timeout date    : Thu Nov 14 16:13:23 CST 2019

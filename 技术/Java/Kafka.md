@@ -46,7 +46,7 @@ Consumer从Partition中消费消息是顺序消费，默认从头消费
 
 ## 底层实现
 
-### 日子存储机制
+### 日志存储机制
 
 ### 偏移量
 
@@ -64,7 +64,7 @@ Consumer从Partition中消费消息是顺序消费，默认从头消费
 
 ### 副本集
 
-### Leader选举
+
 
 ### 日志压缩
 
@@ -72,7 +72,21 @@ Consumer从Partition中消费消息是顺序消费，默认从头消费
 
 ## 集群配置
 
+- Broker: 一般指kafka的部署节点
+- Leader: 用于处理消息的接收和消费等请求
+- Follower: 主要用于备份消息数据
+
 ### 拓扑结构
+
+![拓扑结构](https://gtw.oss-cn-shanghai.aliyuncs.com/Kafka/kafka%E6%8B%93%E6%89%91%E7%BB%93%E6%9E%84.jpeg)
+
+### Leader选举
+
+ 并没有采用投票多数来选举leader的机制（各个节点可能同步数据量不一样）
+
+采用动态维护一组Leader数据的副本（ISR），kafka会在ISR中选择一个速度比较快的设为leader。
+
+如果ISR中副本全部宕机，kafka会进行unclean leader选举，提供了两种不同方式处理该部分内容：1. 等ISR恢复，在ISR中选出一个leader；2. 在ISR之外的Follower中选取一个leader。（生产建议禁用"unclean leader"选举，手动来指定最小ISR）
 
 ### zk在kafka中的应用
 
