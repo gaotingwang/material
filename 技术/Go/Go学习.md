@@ -295,6 +295,8 @@ fmt.Println(node.GetNodeValue())
 - main包包含可执行入口
 - 为结构定义的方法必须放在**同一包内**，可以是不同的文件
 
+
+
 ## 面向接口
 
 接口定义：
@@ -334,8 +336,6 @@ type Retriever struct {
 func (receiver Retriever) Get(url string) string {
 	return receiver.Msg
 }
-
-
 -------------------
 package real
 
@@ -381,6 +381,8 @@ func main() {
 
 闭包概念
 
+
+
 ## 依赖管理
 
 依赖管理的三个阶段：GOPATH、GOVENDOR、go mod
@@ -397,12 +399,17 @@ func main() {
 
   更新依赖：`go get 库[@version]` ，`go mod tidy`
 
+
+
 ## 工程化
 
 资源管理，错误处理
 测试和文档
 性能调优
 
+
+
 ## 并发编程
+
 goroutine 和 channel
 调度器理解
