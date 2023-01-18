@@ -243,7 +243,7 @@ type TreeNode struct {
 }
 
 // 为结构定义方法:显示定义接收者
-func (node TreeNode) getNodeValue() int {
+func (node TreeNode) GetNodeValue() int {
 	return node.Value
 }
 // 只有指针才可以改变结构体内容
@@ -268,6 +268,21 @@ root.Right.Left = new(TreeNode)
 type MyNode TreeNode
 ```
 
+扩展已有类型：可以通过组合、定义别名、内嵌的方式来扩展已有类型，内嵌与继承有点类似，但不是真的继承如没有多态表示等，只是个语法糖
+
+```go
+type myNode struct {
+    // 内嵌方式
+	*test.TreeNode // 理解为myNode结构中有一个属性叫TreeNode
+}
+
+// 通过内嵌的方式，可以直接使用原结构的属性和方法，也可以对其进行重载和扩展
+node := myNode{&test.TreeNode{Value: 3}}
+node.Left = &test.TreeNode{Value: 4}
+node.Right = &test.TreeNode{Value: 5}
+fmt.Println(node.GetNodeValue())
+```
+
 封装：
 
 - 命名统一采用驼峰形式
@@ -282,11 +297,88 @@ type MyNode TreeNode
 
 ## 面向接口
 
-结构体
-duck typing概念
-组合思想
+接口定义：
+
+```go
+type Retriever interface {
+    // 接口方法，不需要显式指定func
+	Get(url string) string
+}
+```
+
+接口组合：
+
+```go
+// 接口同时具有Retriever、Poster的接口方法
+type RetrieverPoster interface {
+    Retriever
+    Poster
+}
+```
+
+接口实现：
+
+- 接口实现是隐式的
+- 只要实现接口里的方法
+
+```go
+package mock
+
+// 结构体不需要声明实现哪个接口
+type Retriever struct {
+	Msg string
+}
+
+// 只需要实现方法与接口中定义的保持一样
+// 值接收者，使用时候指针和值方式都可，如：r = mock.Retriever{} 或 r = &mock.Retriever{}
+func (receiver Retriever) Get(url string) string {
+	return receiver.Msg
+}
+
+
+-------------------
+package real
+
+type Retriever struct {
+	Header  string
+	TimeOut time.Duration
+}
+
+// 采用了指针接收者，在使用的时候只能使用指针方式，见main()中的 r = &real.Retriever{}
+func (r *Retriever) Get(url string) string {
+	...
+	return r.Header
+}
+```
+
+指针变量：包含实现者的类型（type switch）和实现者的值（Type assertion）
+
+```go
+func main() {
+	var r Retriever
+	r = mock.Retriever{}
+	fmt.Printf("%T %v\n", r, r)
+	// 接口变量自带指针，同样采用值传递，几乎不使用接口的指针
+	r = &real.Retriever{}
+    
+    // type switch
+	switch v := r.(type) {
+	case mock.Retriever:
+		fmt.Println("It is mock retriever: ", v.Msg)
+	case *real.Retriever:
+		fmt.Println("It is mock retriever", v.Header)
+	}
+
+    // Type assertion，通过`接口对象.`方式来获取到接口变量中的对象值
+	c, ok := r.(mock.Retriever)
+	fmt.Println(c, ok)
+}
+```
+
+
 
 ## 函数式编程
+
 闭包概念
 
 ## 依赖管理
