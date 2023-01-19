@@ -361,7 +361,7 @@ func main() {
 	// 接口变量自带指针，同样采用值传递，几乎不使用接口的指针
 	r = &real.Retriever{}
     
-    // type switch
+    // .(type) 为 type switch，在switch语句中使用
 	switch v := r.(type) {
 	case mock.Retriever:
 		fmt.Println("It is mock retriever: ", v.Msg)
@@ -379,7 +379,79 @@ func main() {
 
 ## 函数式编程
 
-闭包概念
+闭包概念：一个函数的内部函数为匿名函数，匿名函数优越性在于可以直接使用这个函数内的变量，不必申明。当一个外部函数返回结果为其内部函数时，相关参数和变量都保存在返回的函数中，这种称为“闭包(Closure)”的程序结构拥有极大的威力。
+
+返回闭包时牢记的一点就是：返回函数不要引用任何循环变量，或者后续会发生变化的变量：
+
+```go
+// 方法返回的是一个函数数组
+func count() []func() int {
+	var arr = make([]func() int, 3)
+	for i := 0; i < 3; i++ {
+		arr[i] = func() int {
+			return i * i
+		}
+	}
+	return arr
+}
+
+func main() {
+	result := count()
+	f1 := result[0]
+	f2 := result[1]
+	f3 := result[2]
+	// 返回的函数引用了变量i，但它并非立刻执行，等到3个函数都返回时，它们所引用的变量i已经变成了3，因此最终结果为9。
+	fmt.Println(f1()) // 9
+	fmt.Println(f2()) // 9
+	fmt.Println(f3()) // 9
+}
+```
+
+go语言中闭包使用：
+
+- 没有lambda表达式，有匿名函数
+- 更为自然，不需要修饰如何访问自由变量
+
+为函数实现接口：函数在go中不光可以作为参数、类型、返回值，同时还可以实现接口
+
+```go
+// 定义函数
+type fbiGen func() int
+
+// 函数式编程，返回结果为函数，其内包含了相关参数和局部变量a, b都保存在返回的函数中
+func fbiInitFunction() fbiGen {
+	a, b := 0, 1
+	return func() int {
+		a, b = b, a+b
+		return a
+	}
+}
+
+// 为函数fbiGen 实现 io.Reader 接口
+func (f fbiGen) Read(p []byte) (n int, err error) {
+	next := f()
+	if next > 10000 {
+		return 0, io.EOF
+	}
+
+	s := fmt.Sprintf("%d\n", next)
+	return strings.NewReader(s).Read(p)
+}
+
+// 定义接收io.Reader参数的方法
+func printContents(reader io.Reader) {
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+	}
+}
+
+func main() {
+	f := fbiInitFunction()
+    // 函数就可以传入接收io.Reader的方法中
+	printContents(f)
+}
+```
 
 
 
@@ -403,9 +475,41 @@ func main() {
 
 ## 工程化
 
-资源管理，错误处理
-测试和文档
-性能调优
+- 资源管理，错误处理
+
+  `defer` 关键字：
+
+  - 可以确保调用在函数结束时发生
+  - `defer`列表为先进后出
+  - 参数在执行`defer`语句时计算
+
+  错误处理：
+
+  - `panic(err)`可以打印出错信息，停止当前函数执行，一直向上返回，执行每一层的`defer`，如果没有遇见`recover()`程序就会退出
+
+  - `recover()`仅在`defer`调用中使用，获取`panic`值，如果无法处理，可重新`panic`
+
+    ```go
+    func main() {
+    	defer func() {
+    		// r 为panic中内容
+    		r := recover()
+    		if err, ok := r.(error); ok {
+    			fmt.Println("Error occurred: ", err)
+    		} else {
+    			panic("I know nothing")
+    		}
+    	}()
+    
+    	panic(errors.New("test error"))
+    }
+    ```
+
+  
+
+- 测试和文档
+
+- 性能调优
 
 
 
