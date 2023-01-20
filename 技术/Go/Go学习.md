@@ -153,14 +153,15 @@
     arr2 := [3]int{1, 3, 5}
     // 由编译器决定数组大小
     arr3 := [...]int{2, 4, 6}
+    arr3 := []int{2, 4, 6}
     // range 关键字可以获取到集合的元素下标和值
     for i, v := range arr3 {
         fmt.Println(i, v)
     }
     ```
-
+  
   - 切片
-
+  
     ```go
     arr := [...]int{0, 1, 2, 3, 4, 5, 6, 7}
     s1 := arr[2:6]
@@ -179,14 +180,14 @@
     // s2元素copy到s3，s3=[5 6 0 0 0 0 0 0 0 0]
     copy(s3, s2)
     ```
-
+  
     > 1. `s[i]` 不可以超越`len(s)`，向后扩展不可以超越底层数组`cap(s)`，也不可向前扩展
     > 2. 向slice添加元素，未超过cap，会替换原有数组的内容；超过cap，会重新分配新的底层数组
-
+  
   - Map
-
+  
     定义：map[K]V，map[K1]map[K2]V2
-
+  
     ```go
     // 定义，除了slice、map、function的内建类型都可以作为key，struct不包含上述类型也可作为key
     m := make(map[string]int)
@@ -207,9 +208,9 @@
     // 删除元素
     delete(m1, "name")
     ```
-
+  
   - 字符串
-
+  
     ```go
     str := "你好美女"
     // len获取字节长度，一个中文占3个字节
@@ -227,9 +228,9 @@
         fmt.Printf("(%d, %c)", i, v)
     }
     ```
-
+  
     > 字符串其他相关操作都在`strings`包下
-
+  
   
 
 ## 面向对象
@@ -505,11 +506,56 @@ func main() {
     }
     ```
 
-  
-
 - 测试和文档
 
-- 性能调优
+  编写测试和函数很类似，其中有一些规则
+
+  - 程序需要在一个名为 `xxx_test.go` 的文件中编写
+  - 测试函数的命名必须以单词 `Test` 开始
+  - 测试函数只接受一个参数 `t *testing.T`
+
+  类型为 `*testing.T` 的变量 `t` 是在测试框架中的 hook（钩子），当想让测试失败时可以执行 `t.Fail()` 之类的操作
+
+  ```go
+  func TestAdd(t *testing.T) {
+  	test := []struct{ a, b, c int }{
+  		{1, 2, 3},
+  		{2, 3, 6},
+  		{5, 6, 11},
+  	}
+  
+  	for _, tt := range test {
+  		if result := Add(tt.a, tt.b); result != tt.c {
+  			t.Errorf("Add Test(%d, %d) result is %d, expect is %d", tt.a, tt.b, result, tt.c)
+  		}
+  	}
+  }
+  ```
+
+  性能测试：
+
+  - 函数名必须以 `Benchmark` 开头，后面一般跟待测试的函数名
+  - 参数为 `b *testing.B`
+
+  ```go
+  func BenchmarkAdd(b *testing.B) {
+  	p1, p2 := 1, 2
+  	ans := 8
+  
+  	for i := 0; i < b.N; i++ {
+  		result := Add(p1, p2)
+  		if result != ans {
+  			b.Errorf("Add Test(%d, %d) result is %d, expect is %d", p1, p2, result, ans)
+  		}
+  	}
+  }
+  ```
+
+  `go test .` 命令可以运行当前目录下的测试文件
+
+  https://geektutu.com/post/quick-go-test.html
+
+- `pprof`性能调优
 
 
 
@@ -517,3 +563,8 @@ func main() {
 
 goroutine 和 channel
 调度器理解
+
+
+
+## 反射机制
+
