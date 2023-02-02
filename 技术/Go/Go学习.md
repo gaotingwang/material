@@ -509,7 +509,8 @@ func main() {
 
 - 程序需要在一个名为 `xxx_test.go` 的文件中编写
 - 测试函数的命名必须以单词 `Test` 开始
-- 测试函数只接受一个参数 `t *testing.T`
+- 测试函数接受一个参数 `t *testing.T`
+- TestMain 的参数是 `*testing.M` 类型
 
 类型为 `*testing.T` 的变量 `t` 是在测试框架中的 hook（钩子），当想让测试失败时可以执行 `t.Fail()` 之类的操作
 
