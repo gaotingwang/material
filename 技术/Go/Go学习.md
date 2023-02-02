@@ -1,45 +1,43 @@
 ## 基本语法
-- 变量
+### 变量
 
-  定义：使用`var`关键字，也可使用`var( )`来集中定义，编译器可自动决定类型，**在函数内定义变量可使用`:=`省略`var`的方式**
+定义：使用`var`关键字，也可使用`var( )`来集中定义，编译器可自动决定类型，**在函数内定义变量可使用`:=`省略`var`的方式**，<font color="red">变量类型写在变量名之后</font>
 
-  <font color="red">变量类型写在变量名之后</font>
+```go
+// zero value
+var a int
+var b string
+fmt.Printf("%d %q\n", a, b)
 
-  ```go
-  // zero value
-  var a int
-  var b string
-  fmt.Printf("%d %q\n", a, b)
-  
-  // init value
-  var a1, a2 int = 3, 4
-  var b1 string = "abc"
-  fmt.Println(a1, a2, b1)
-  
-  // type deduction
-  var c, d, e, f = 1, 2, true, "edf"
-  fmt.Println(c, d, e, f)
-  
-  // defined shorter
-  c1, d1, e1, f1 := 3, 4, false, "hhh"
-  d1 = 6
-  fmt.Println(c1, d1, e1, f1)
-  
-  // package variable
-  fmt.Println(aa, bb, cc)
-  
-  var (
-      aaa int
-      bbb string = "ddd"
-  )
-  ```
+// init value
+var a1, a2 int = 3, 4
+var b1 string = "abc"
+fmt.Println(a1, a2, b1)
 
-  类型：
+// type deduction
+var c, d, e, f = 1, 2, true, "edf"
+fmt.Println(c, d, e, f)
 
-  - `bool`, `string`
-  - `(u)int`, `(u)int8`, `(u)int16`, `(u)int32`, `(u)int64`, `uintptr`
-  - `byte`, `rune` (`rune`理解为`char`)
-  - `float32`, `float64`, `complex64`, `complex128`, 
+// defined shorter
+c1, d1, e1, f1 := 3, 4, false, "hhh"
+d1 = 6
+fmt.Println(c1, d1, e1, f1)
+
+// package variable
+fmt.Println(aa, bb, cc)
+
+var (
+    aaa int
+    bbb string = "ddd"
+)
+```
+
+类型：
+
+- `bool`, `string`
+- `(u)int`, `(u)int8`, `(u)int16`, `(u)int32`, `(u)int64`, `uintptr`
+- `byte`, `rune` (`rune`理解为`char`)
+- `float32`, `float64`, `complex64`, `complex128`, 
 
 - 常量、枚举
 
@@ -57,181 +55,180 @@
   fmt.Println(aa, bb, cc, dd) // 0 1 2 3
   ```
 
-- 选择、循环
+### 数组、容器、字符串
 
-  - if 的条件里不需要括号，条件中可以赋值，条件里赋值的变量作用域只在if 块中
-
-    ```go
-    const fileName = "abc.txt"
-    if contents, err := ioutil.ReadFile(fileName); err != nil {
-        fmt.Println(err)
-    } else {
-        fmt.Printf("%s\n", contents)
-    }
-    ```
-
-  - switch 会自动break，不需要在每个case中单独加；switch之后可以没有表达式，在case放置条件
-
-    ```go
-    grade := ""
-    switch {
-    case score < 0 || score > 100:
-        panic(fmt.Sprintf("Wrong Score: %d", score))
-    case score < 60:
-        grade = "D"
-    case score < 80:
-        grade = "C"
-    case score < 90:
-        grade = "B"
-    case score <= 100:
-        grade = "A"
-    default:
-        panic(fmt.Sprintf("Wrong Score: %d", score))
-    }
-    return grade
-    ```
-
-  - for 条件不需要括号，可以省略初始条件，结束条件，递增条件
-
-    ```go
-    sum := 0
-    for i := 0; i < 100; i++ {
-        sum += i
-    }
-    fmt.Println(sum)
-    ```
-
-  - 没有while关键字，省略初始条件和递增条件，就是while循环；省略结束条件就是死循环
-
-    ```go
-    for age < 18 {
-        ...
-    }
-    ```
-
-- 函数、指针
-
-  与Java都是反的，go函数的**函数名在前，返回值在后**；**变量名在前，类型在后**；**可以有多个返回值**
+- 数组: go一般不直接使用数组
 
   ```go
-  func eval(a, b int, op string) (int, error) {
-      
-  }
-  // 如果函数返回值有多个，但只需要其中一个返回值可以通过_来忽略返回值
-  result,_ := evel(3, 4, "*")
-  
-  // 可变长参数
-  func test(a ...int) int {
+  var arr1 [5]int
+  arr2 := [3]int{1, 3, 5}
+  // 由编译器决定数组大小
+  arr3 := [...]int{2, 4, 6}
+  arr3 := []int{2, 4, 6}
+  // range 关键字可以获取到集合的元素下标和值
+  for i, v := range arr3 {
+      fmt.Println(i, v)
   }
   ```
 
-  指针：在Go语言中，指针比较简单，指针不可运算。它的使用方式：
-
-  1. 定义指针变量：它的表示也是反的，**通过\* + 类型来表示一个指针类型**；
-  2. 为指针赋值：Go 语言的取地址符是 &，放到一个变量前使用就会返回相应变量的内存地址；
-  3. 访问指针变量中指向地址的值：在指针类型前面加上 * 号（前缀）来获取指针所指向的内容
+- 切片
 
   ```go
-  var x int = 8
-  // 声明指针变量
-  var p *int
-  // 为指针变量赋值
-  p = &x
-  fmt.Println("p is ", p)
-  // 访问指针变量中指向地址的值
-  fmt.Println("*p is ", *p)
-  *p = 9
-  fmt.Println(x)
+  arr := [...]int{0, 1, 2, 3, 4, 5, 6, 7}
+  s1 := arr[2:6] // [2 3 4 5]
+  s2 := s1[3:5] // s2=[5 6], 不会越界，但s1[4]会越界报错
+  
+  // append元素
+  a1 := append(s2, 10) // [5 6 10]
+  a2 := append(a1, 11) // [5 6 10 11]
+  // arr = [0 1 2 3 4 5 6 10]
+  
+  // 创建初始化的slice
+  s3 := make([]int, 10) // len=10, cap = 10
+  s4 := make([]int, 10, 32) // len = 10, cap = 32，初始值都为0
+  
+  // s2元素copy到s3，s3=[5 6 0 0 0 0 0 0 0 0]
+  copy(s3, s2)
   ```
 
-- 数组、容器、字符串
+  > 1. `s[i]` 不可以超越`len(s)`，向后扩展不可以超越底层数组`cap(s)`，也不可向前扩展
+  > 2. 向slice添加元素，未超过cap，会替换原有数组的内容；超过cap，会重新分配新的底层数组
 
-  - 数组: go一般不直接使用数组
+- Map
 
-    ```go
-    var arr1 [5]int
-    arr2 := [3]int{1, 3, 5}
-    // 由编译器决定数组大小
-    arr3 := [...]int{2, 4, 6}
-    arr3 := []int{2, 4, 6}
-    // range 关键字可以获取到集合的元素下标和值
-    for i, v := range arr3 {
-        fmt.Println(i, v)
-    }
-    ```
-  
-  - 切片
-  
-    ```go
-    arr := [...]int{0, 1, 2, 3, 4, 5, 6, 7}
-    s1 := arr[2:6]
-    // s2=[5 6], 不会越界，但s1[4]会越界报错
-    s2 := s1[3:5]
+  定义：map[K]V，map[K1]map[K2]V2
+
+  ```go
+  // 定义，除了slice、map、function的内建类型都可以作为key，struct不包含上述类型也可作为key
+  m := make(map[string]int)
+  m1 := map[string]string{
+      "name": "zhangsan",
+      "city": "北京",
+  }
+  // 遍历，不保证顺序，如需排序，需手动对key排序，可以把key放在slice中
+  for k, v := range m1 {
+      fmt.Println(k, v)
+  }
+  // 取值，key不存在，获取value类型的初始值
+  if name, exist := m1["nn"]; exist {
+      fmt.Println(name)
+  } else {
+      fmt.Println("key not exist")
+  }
+  // 删除元素
+  delete(m1, "name")
+  ```
+
+- 字符串
+
+  ```go
+  str := "你好美女"
+  // len获取字节长度，一个中文占3个字节
+  fmt.Println(len(str))
+  // []byte获得字节
+  fmt.Println([]byte(str))
+  // utf8.RuneCountInString 获取字符数
+  fmt.Println(utf8.RuneCountInString(str))
+  // 中文长度占3个长度，i = 0,3,6,9，v 就是一个rune，是一个unicode编码
+  for i, v := range str {
+      fmt.Printf("(%d, %d)", i, v)
+  }
+  // 直接转为[]rune,会新开空间存储 i = 0,1,2,3
+  for i, v := range []rune(str) {
+      fmt.Printf("(%d, %c)", i, v)
+  }
+  ```
+
+  > 字符串其他相关操作都在`strings`包下
+
+### 选择、循环
+
+- if 的条件里不需要括号，条件中可以赋值，条件里赋值的变量作用域只在if 块中
+
+  ```go
+  const fileName = "abc.txt"
+  if contents, err := ioutil.ReadFile(fileName); err != nil {
+      fmt.Println(err)
+  } else {
+      fmt.Printf("%s\n", contents)
+  }
+  ```
+
+- switch 会自动break，不需要在每个case中单独加；switch之后可以没有表达式，在case放置条件
+
+  ```go
+  grade := ""
+  switch {
+  case score < 0 || score > 100:
+      panic(fmt.Sprintf("Wrong Score: %d", score))
+  case score < 60:
+      grade = "D"
+  case score < 80:
+      grade = "C"
+  case score < 90:
+      grade = "B"
+  case score <= 100:
+      grade = "A"
+  default:
+      panic(fmt.Sprintf("Wrong Score: %d", score))
+  }
+  return grade
+  ```
+
+- for 条件不需要括号，可以省略初始条件，结束条件，递增条件
+
+  ```go
+  sum := 0
+  for i := 0; i < 100; i++ {
+      sum += i
+  }
+  fmt.Println(sum)
+  ```
+
+- 没有while关键字，省略初始条件和递增条件，就是while循环；省略结束条件就是死循环
+
+  ```go
+  for age < 18 {
+      ...
+  }
+  ```
+
+### 函数、指针
+
+与Java都是反的，go函数的**函数名在前，返回值在后**；**变量名在前，类型在后**；**可以有多个返回值**
+
+```go
+func eval(a, b int, op string) (int, error) {
     
-    // append元素
-    a1 := append(s2, 10) // [5 6 10]
-    a2 := append(a1, 11) // [5 6 10 11]
-    // arr = [0 1 2 3 4 5 6 10]
-    
-    // 创建初始化的slice
-    s3 := make([]int, 10) // len=10, cap = 10
-    s4 := make([]int, 10, 32) // len = 10, cap = 32，初始值都为0
-    
-    // s2元素copy到s3，s3=[5 6 0 0 0 0 0 0 0 0]
-    copy(s3, s2)
-    ```
-  
-    > 1. `s[i]` 不可以超越`len(s)`，向后扩展不可以超越底层数组`cap(s)`，也不可向前扩展
-    > 2. 向slice添加元素，未超过cap，会替换原有数组的内容；超过cap，会重新分配新的底层数组
-  
-  - Map
-  
-    定义：map[K]V，map[K1]map[K2]V2
-  
-    ```go
-    // 定义，除了slice、map、function的内建类型都可以作为key，struct不包含上述类型也可作为key
-    m := make(map[string]int)
-    m1 := map[string]string{
-        "name": "zhangsan",
-        "city": "北京",
-    }
-    // 遍历，不保证顺序，如需排序，需手动对key排序，可以把key放在slice中
-    for k, v := range m1 {
-        fmt.Println(k, v)
-    }
-    // 取值，key不存在，获取value类型的初始值
-    if name, exist := m1["nn"]; exist {
-        fmt.Println(name)
-    } else {
-        fmt.Println("key not exist")
-    }
-    // 删除元素
-    delete(m1, "name")
-    ```
-  
-  - 字符串
-  
-    ```go
-    str := "你好美女"
-    // len获取字节长度，一个中文占3个字节
-    fmt.Println(len(str))
-    // []byte获得字节
-    fmt.Println([]byte(str))
-    // utf8.RuneCountInString 获取字符数
-    fmt.Println(utf8.RuneCountInString(str))
-    // 中文长度占3个长度，i = 0,3,6,9，v 就是一个rune，是一个unicode编码
-    for i, v := range str {
-        fmt.Printf("(%d, %d)", i, v)
-    }
-    // 直接转为[]rune,会新开空间存储 i = 0,1,2,3
-    for i, v := range []rune(str) {
-        fmt.Printf("(%d, %c)", i, v)
-    }
-    ```
-  
-    > 字符串其他相关操作都在`strings`包下
-  
-  
+}
+// 如果函数返回值有多个，但只需要其中一个返回值可以通过_来忽略返回值
+result,_ := evel(3, 4, "*")
+
+// 可变长参数
+func test(a ...int) int {
+}
+```
+
+指针：在Go语言中，指针比较简单，指针不可运算。它的使用方式：
+
+1. 定义指针变量：它的表示也是反的，**通过\* + 类型来表示一个指针类型**；
+2. 为指针赋值：Go 语言的取地址符是 &，放到一个变量前使用就会返回相应变量的内存地址；
+3. 访问指针变量中指向地址的值：在指针类型前面加上 * 号（前缀）来获取指针所指向的内容
+
+```go
+var x int = 8
+// 声明指针变量
+var p *int
+// 为指针变量赋值
+p = &x
+fmt.Println("p is ", p)
+// 访问指针变量中指向地址的值
+fmt.Println("*p is ", *p)
+*p = 9
+fmt.Println(x)
+```
+
+
 
 ## 面向对象
 
@@ -356,7 +353,7 @@ func (r *Retriever) Get(url string) string {
 
 ```go
 func main() {
-	var r Retriever
+	var r Retriever // 接口变量
 	r = mock.Retriever{}
 	fmt.Printf("%T %v\n", r, r)
 	// 接口变量自带指针，同样采用值传递，几乎不使用接口的指针
@@ -476,84 +473,84 @@ func main() {
 
 ## 工程化
 
-- 资源管理，错误处理
+### 资源管理，错误处理
 
-  `defer` 关键字：
+`defer` 关键字：
 
-  - 可以确保调用在函数结束时发生
-  - `defer`列表为先进后出
-  - 参数在执行`defer`语句时计算
+- 可以确保调用在函数结束时发生
+- `defer`列表为先进后出
+- 参数在执行`defer`语句时计算
 
-  错误处理：
+错误处理：
 
-  - `panic(err)`可以打印出错信息，停止当前函数执行，一直向上返回，执行每一层的`defer`，如果没有遇见`recover()`程序就会退出
+- `panic(err)`可以打印出错信息，停止当前函数执行，一直向上返回，执行每一层的`defer`，如果没有遇见`recover()`程序就会退出
 
-  - `recover()`仅在`defer`调用中使用，获取`panic`值，如果无法处理，可重新`panic`
-
-    ```go
-    func main() {
-    	defer func() {
-    		// r 为panic中内容
-    		r := recover()
-    		if err, ok := r.(error); ok {
-    			fmt.Println("Error occurred: ", err)
-    		} else {
-    			panic("I know nothing")
-    		}
-    	}()
-    
-    	panic(errors.New("test error"))
-    }
-    ```
-
-- 测试和文档
-
-  编写测试和函数很类似，其中有一些规则
-
-  - 程序需要在一个名为 `xxx_test.go` 的文件中编写
-  - 测试函数的命名必须以单词 `Test` 开始
-  - 测试函数只接受一个参数 `t *testing.T`
-
-  类型为 `*testing.T` 的变量 `t` 是在测试框架中的 hook（钩子），当想让测试失败时可以执行 `t.Fail()` 之类的操作
+- `recover()`仅在`defer`调用中使用，获取`panic`值，如果无法处理，可重新`panic`
 
   ```go
-  func TestAdd(t *testing.T) {
-  	test := []struct{ a, b, c int }{
-  		{1, 2, 3},
-  		{2, 3, 6},
-  		{5, 6, 11},
-  	}
-  
-  	for _, tt := range test {
-  		if result := Add(tt.a, tt.b); result != tt.c {
-  			t.Errorf("Add Test(%d, %d) result is %d, expect is %d", tt.a, tt.b, result, tt.c)
+  func main() {
+  	defer func() {
+  		// r 为panic中内容
+  		r := recover()
+  		if err, ok := r.(error); ok {
+  			fmt.Println("Error occurred: ", err)
+  		} else {
+  			panic("I know nothing")
   		}
-  	}
+  	}()
+  
+  	panic(errors.New("test error"))
   }
   ```
 
-  性能测试：
+### 测试和文档
 
-  - 函数名必须以 `Benchmark` 开头，后面一般跟待测试的函数名
-  - 参数为 `b *testing.B`
+编写测试和函数很类似，其中有一些规则
 
-  ```go
-  func BenchmarkAdd(b *testing.B) {
-  	p1, p2 := 1, 2
-  	ans := 8
-  
-  	for i := 0; i < b.N; i++ {
-  		result := Add(p1, p2)
-  		if result != ans {
-  			b.Errorf("Add Test(%d, %d) result is %d, expect is %d", p1, p2, result, ans)
-  		}
-  	}
-  }
-  ```
+- 程序需要在一个名为 `xxx_test.go` 的文件中编写
+- 测试函数的命名必须以单词 `Test` 开始
+- 测试函数只接受一个参数 `t *testing.T`
 
-  `go test .` 命令可以运行当前目录下的测试文件
+类型为 `*testing.T` 的变量 `t` 是在测试框架中的 hook（钩子），当想让测试失败时可以执行 `t.Fail()` 之类的操作
 
-  https://geektutu.com/post/quick-go-test.html
+```go
+func TestAdd(t *testing.T) {
+	test := []struct{ a, b, c int }{
+		{1, 2, 3},
+		{2, 3, 6},
+		{5, 6, 11},
+	}
+
+	for _, tt := range test {
+		if result := Add(tt.a, tt.b); result != tt.c {
+			t.Errorf("Add Test(%d, %d) result is %d, expect is %d", tt.a, tt.b, result, tt.c)
+		}
+	}
+}
+```
+
+性能测试：
+
+- 函数名必须以 `Benchmark` 开头，后面一般跟待测试的函数名
+- 参数为 `b *testing.B`
+
+```go
+func BenchmarkAdd(b *testing.B) {
+	p1, p2 := 1, 2
+	ans := 8
+
+	for i := 0; i < b.N; i++ {
+		result := Add(p1, p2)
+		if result != ans {
+			b.Errorf("Add Test(%d, %d) result is %d, expect is %d", p1, p2, result, ans)
+		}
+	}
+}
+```
+
+`go test .` 命令可以运行当前目录下的测试文件
+
+https://geektutu.com/post/quick-go-test.html
 
 - `pprof`性能调优
 
@@ -561,8 +558,139 @@ func main() {
 
 ## 并发编程
 
-goroutine 和 channel
-调度器理解
+### goroutine
+
+`go`关键字可以定义开启一个协程去运行相应函数：
+
+- 任何函数只需要加上`go` 就能给调度器来运行
+- 不需要在定义时，区分是否为异步函数
+- 调度器会在合适点进行切换
+- 使用`-race`来检测数据访问冲突，eg：`go run -race goroutine.go`
+
+```go
+func main() {
+	for i := 0; i < 1000; i++ {
+		go func(i int) {
+			for {
+				fmt.Println("test goruntine %d", i)
+			}
+		}(i)
+	}
+	time.Sleep(time.Millisecond)
+}
+```
+
+协程 coroutine：
+- 轻量级“线程”
+- 非抢占式多任务处理，由协程主动交出控制权
+- 编译器/解释器/虚拟机层面的多任务，非操作系统层面
+- 多个协程可能在一个或多个线程上运行
+
+goroutine 切换点：
+
+- I/O，select
+- channel
+- 等待锁
+- 函数调用（有时）
+- runtime.Gosched()  手动提供的一个切换点
+- 只是参考，不能保证切换，不能保证在其他地方不切换
+
+### channel
+
+单纯地将函数并发执行是没有意义的，函数与函数间需要交换数据才能体现并发执行函数的意义。虽然可以使用共享内存进行数据交换，但是共享内存在不同的goroutine中容易发生竞态问题。为了保证数据交换的正确性，必须使用互斥量对内存进行加锁，这种做法势必造成性能问题。
+
+如果说goroutine是Go程序并发的执行体，channel就是它们之间的连接。channel是可以让一个goroutine发送特定值到另一个goroutine的通信机制。通道（channel）是一种特殊的类型，像一个传送带或者队列，总是遵循先入先出（First In First Out）的规则，保证收发数据的顺序。
+
+每一个通道都是一个具体类型的导管，也就是声明channel的时候需要为其指定元素类型。
+
+```go
+// channel是一种类型，一种引用类型，声明格式：var 变量 chan 元素类型
+// 通道是引用类型，通道类型的空值是nil
+var ch1 chan int // 声明一个传递整型的通道
+
+// 声明的通道后需要使用make函数初始化之后才能使用, make(chan 元素类型, [缓冲大小])
+ch2 := make(chan int)
+
+// 单向通道使用：在函数传参及任何赋值操作中将双向通道转换为单向通道是可以的，但反过来是不可以的
+// chan<- int是一个只能发送的通道，可以发送但是不能接收
+func counter(out chan<- int) {
+    for i := 0; i < 100; i++ {
+        out <- i
+    }
+    close(out)
+}
+
+// <-chan int是一个只能接收的通道，可以接收但是不能发送
+func printer(in <-chan int) {
+    for i := range in {
+        fmt.Println(i)
+    }
+}
+```
+
+通道有发送（send）、接收(receive）和关闭（close）三种操作：
+
+```go
+// 1. 发送
+ch1 <- 10 // 把10发送到ch中
+
+// 2. 接收
+x := <-ch1 // 从ch中接收值并赋值给变量x
+<-ch1      // 从ch中接收值，忽略结果
+
+// 3. 关闭
+close(ch1) // 通过调用内置的close函数来关闭通道
+
+// 判断通道是否关闭
+for {
+    // ok通道中是否还有值
+    i, ok := <-ch1 
+    if !ok {
+        break
+    }
+}
+
+// 通道关闭后无值会退出for range循环
+for i := range ch2 { 
+    fmt.Println(i)
+}
+```
+
+关闭后的通道有以下特点：
+
+1. 对一个关闭的通道再发送值就会导致panic。
+2. 对一个关闭的通道进行接收会一直获取值，直到通道为空。
+3. 对一个关闭的并且没有值的通道执行接收操作，会得到对应类型的零值。
+4. 关闭一个已经关闭的通道会导致panic。
+
+缓冲通道：
+
+```go
+------------ 无缓冲
+func recv(c chan int) {
+    ret := <-c
+    fmt.Println("接收成功", ret)
+}
+
+func main() {
+    // 无缓冲的通道，无缓冲的通道只有在有人接收值的时候才能发送值
+    // 无缓冲通道上的发送操作会阻塞，直到另一个goroutine在该通道上执行接收操作
+    ch := make(chan int)
+    // 如果没有通道接收，会产生deadLock
+    go recv(ch) // 启用goroutine从通道接收值
+    ch <- 10
+    fmt.Println("发送成功")
+}
+
+--------------- 有缓冲通道
+
+func main() {
+    // 只要通道的容量大于零，那么该通道就是有缓冲的通道，通道的容量表示通道中能存放元素的数量
+    ch := make(chan int, 1) // 创建一个容量为1的有缓冲区通道
+    ch <- 10
+    fmt.Println("发送成功")
+}
+```
 
 
 
