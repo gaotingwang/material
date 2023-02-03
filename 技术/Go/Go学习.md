@@ -467,6 +467,17 @@ func main() {
 
   增加依赖：`go get`会去加载依赖包到`$GOPATH/pkg/mod`目录下，同时将依赖记录在`go mod`文件中  / 也可以直接import，在build（`go build ./...`）时候会自动修改mod文件
 
+  设置代理：
+  
+  ​	
+  
+  ```shell
+  $ go env -w GO111MODULE=on
+  $ go env -w GOPROXY=https://goproxy.cn,direct
+  ```
+  
+  ​	国内可以设置代理 `go env -w GOPROXY=https://goproxy.cn,direct`， `-w` 标记 要求一个或多个形式为 NAME=VALUE 的参数且覆盖默认的设置
+  
   更新依赖：`go get 库[@version]` ，`go mod tidy`
 
 
@@ -503,7 +514,7 @@ func main() {
   }
   ```
 
-### 测试和文档
+### 测试
 
 编写测试和函数很类似，其中有一些规则
 
@@ -516,6 +527,7 @@ func main() {
 
 ```go
 func TestAdd(t *testing.T) {
+    // 表格驱动测试，将测试内容和结果，放在一起来校验
 	test := []struct{ a, b, c int }{
 		{1, 2, 3},
 		{2, 3, 6},
@@ -528,7 +540,17 @@ func TestAdd(t *testing.T) {
 		}
 	}
 }
+
+// 如果测试文件中包含函数 TestMain，那么生成的测试将调用 TestMain(m)，而不是直接运行测试
+func TestMain(m *testing.M) {
+    //  m.Run() 触发所有测试用例的执行
+	code := m.Run()
+    // 使用 os.Exit() 处理返回的状态码，如果不为0，说明有用例失败
+	os.Exit(code)
+}
 ```
+
+`go test .` 命令可以运行当前目录下的测试文件
 
 性能测试：
 
@@ -539,7 +561,9 @@ func TestAdd(t *testing.T) {
 func BenchmarkAdd(b *testing.B) {
 	p1, p2 := 1, 2
 	ans := 8
-
+    
+    // 重置定时器
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		result := Add(p1, p2)
 		if result != ans {
@@ -547,13 +571,55 @@ func BenchmarkAdd(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkParallel(b *testing.B) {
+	templ := template.Must(template.New("test").Parse("Hello, {{.}}!"))
+    // RunParallel 测试并发性能
+	b.RunParallel(func(pb *testing.PB) {
+		var buf bytes.Buffer
+		for pb.Next() {
+			// 所有 goroutine 一起，循环一共执行 b.N 次
+			buf.Reset()
+			templ.Execute(&buf, "World")
+		}
+	})
+}
 ```
 
-`go test .` 命令可以运行当前目录下的测试文件
+http测试：
+针对 http 开发的场景，使用标准库 `net/http/httptest` 进行测试更为高效:
 
-https://geektutu.com/post/quick-go-test.html
+```go
+-------- to be tested
+func helloHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("hello world"))
+}
 
-- `pprof`性能调优
+-------- test code
+import (
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestConn(t *testing.T) {
+	req := httptest.NewRequest("GET", "http://example.com/foo", nil)
+	w := httptest.NewRecorder()
+	helloHandler(w, req)
+	bytes, _ := ioutil.ReadAll(w.Result().Body)
+
+	if string(bytes) != "hello world" {
+		t.Fatal("expected hello world, but got", string(bytes))
+	}
+}
+```
+
+### 文档
+
+1. 注释内容最终可以用来生成文档
+2. 在测试中加入`Example`前缀，来生成文档中的示例
+3. 使用`go doc` / `godoc -http :6000` 来查看生成文档
 
 
 
@@ -600,7 +666,7 @@ goroutine 切换点：
 
 单纯地将函数并发执行是没有意义的，函数与函数间需要交换数据才能体现并发执行函数的意义。虽然可以使用共享内存进行数据交换，但是共享内存在不同的goroutine中容易发生竞态问题。为了保证数据交换的正确性，必须使用互斥量对内存进行加锁，这种做法势必造成性能问题。
 
-如果说goroutine是Go程序并发的执行体，channel就是它们之间的连接。channel是可以让一个goroutine发送特定值到另一个goroutine的通信机制。通道（channel）是一种特殊的类型，像一个传送带或者队列，总是遵循先入先出（First In First Out）的规则，保证收发数据的顺序。
+如果说goroutine是Go程序并发的执行体，channel就是它们之间的连接。<font color="red">**channel是可以让一个goroutine发送特定值到另一个goroutine的通信机制**</font>，所以需要一个goroutine向channel发，另一个goroutine从channel接。通道（channel）是一种特殊的类型，像一个传送带或者队列，总是遵循先入先出（First In First Out）的规则，保证收发数据的顺序。
 
 每一个通道都是一个具体类型的导管，也就是声明channel的时候需要为其指定元素类型。
 
@@ -693,7 +759,143 @@ func main() {
 }
 ```
 
+### select调度
+Go内置了`select`关键字，可以同时响应多个通道的操作
+
+```go
+// select的使用类似于switch语句，它有一系列case分支和一个默认的分支
+// select可以同时监听一个或多个channel
+// 每个case会对应一个通道的通信（接收或发送）过程。select会一直等待，直到某个case的通信操作完成时，就会执行case分支对应的语句
+select {
+case <-chan1:
+	// 如果chan1成功读到数据，则进行该case处理语句
+case chan2 <- 1: // 若 chan2 = nil channel 不会执行
+	// 如果成功向chan2写入数据，则进行该case处理语句
+default:
+	// 如果上面都没有成功，则进入default处理流程，有default相当于非阻塞式的，无是阻塞式的
+}
+```
+
+### 定时器
+
+```go
+finish := time.After(10 * time.Second)    // 多长时间后，返回值为channel
+tick := time.Tick(800 * time.Millisecond) // 定时器，返回值为channel
+for {
+	select {
+	case <-time.After(1000 * time.Millisecond):
+		fmt.Println("timeout")
+	case <-tick:
+		fmt.Println("定时执行")
+	case <-finish:
+		fmt.Println("bye")
+		return
+
+	}
+}
+```
+
+### 传统锁
+
+```go
+var x int64
+var wg sync.WaitGroup // 可以等待多任务执行结束
+var lock sync.Mutex // Go语言中使用sync包的Mutex类型来实现互斥锁
+
+func add() {
+    for i := 0; i < 5000; i++ {
+        lock.Lock() // 加锁
+        defer lock.Unlock() // 解锁
+        x = x + 1
+    }
+    wg.Done() // 等待的任务完成，数量会-1
+}
+func main() {
+    wg.Add(2) // 设置等待数量
+    go add()
+    go add()
+    wg.Wait() // 开始等待，直到全部完成
+    fmt.Println(x)
+}
+```
+
 
 
 ## 反射机制
+
+反射是指在程序运行期对程序本身进行访问和修改的能力
+
+- reflect包封装了反射相关的方法
+- 获取类型信息：`reflect.TypeOf`，是静态的
+- 获取值信息：`reflect.ValueOf`，是动态的
+
+```go
+type User struct {
+	Id   int
+	Name string
+	Age  int
+}
+
+func (u User) Hello(name string) {
+	fmt.Println("Hello：", name)
+}
+
+func main() {
+    u := User{1, "5lmh.com", 20}
+	reflectGet(u)
+	reflectSet(&u)
+}
+
+func reflectGet(o interface{}) {
+	// 获取类型
+	t := reflect.TypeOf(o)
+	fmt.Println("type is :", t)
+	fmt.Println("type name is：", t.Name()) // 缩略名
+
+	// 获取值
+	v := reflect.ValueOf(o)
+	fmt.Println("value is :", v)
+
+	// 获取结构体字段个数
+	fmt.Println("field num is :", t.NumField())
+	// 获取字段值t.Field(i)
+	f := t.Field(0)
+	fmt.Printf("name is %s : type value is %v\n", f.Name, f.Type)
+	// Interface()：获取字段对应的值
+	val := v.Field(0).Interface()
+	fmt.Println("val :", val)
+
+	// 获取方法
+	m := t.Method(0)
+	fmt.Println(m.Name)
+	fmt.Println(m.Type)
+}
+
+func reflectSet(o interface{}) {
+	v := reflect.ValueOf(o)
+
+	// 获取指针指向的元素
+	e := v.Elem()
+	// 取字段
+	fn := e.FieldByName("Name")
+	if fn.Kind() == reflect.String {
+		fn.SetString("kuteng")
+	}
+
+	// 获取方法
+	cm := e.MethodByName("Hello")
+	// 构建一些参数
+	args := []reflect.Value{reflect.ValueOf("6666")}
+	// 没参数的情况下：var args2 []reflect.Value
+	// 调用方法，需要传入方法的参数
+	cm.Call(args)
+}
+
+```
+
+
+
+## HTTP标准库
+
+
 
