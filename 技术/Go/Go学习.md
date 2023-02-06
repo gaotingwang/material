@@ -469,11 +469,13 @@ func main() {
 
   设置代理：
   
-  ​	
-  
   ```shell
-  $ go env -w GO111MODULE=on
-  $ go env -w GOPROXY=https://goproxy.cn,direct
+  # 开启 Go Module
+  go env -w GO111MODULE=on
+  # 设置国内镜像
+  go env -w GOPROXY=https://goproxy.cn,direct
+  # goimports
+  go get -v golang.org/x/tools/cmd/goimports
   ```
   
   ​	国内可以设置代理 `go env -w GOPROXY=https://goproxy.cn,direct`， `-w` 标记 要求一个或多个形式为 NAME=VALUE 的参数且覆盖默认的设置
@@ -551,6 +553,12 @@ func TestMain(m *testing.M) {
 ```
 
 `go test .` 命令可以运行当前目录下的测试文件
+
+```shell
+# 覆盖率
+go test -race -cover  -coverprofile=./coverage.out -timeout=10m -short -v ./...
+go tool cover -func ./coverage.out
+```
 
 性能测试：
 
@@ -897,5 +905,146 @@ func reflectSet(o interface{}) {
 
 ## HTTP标准库
 
+Go语言内置的`net/http`包提供了HTTP客户端和服务端的实现
 
+### 服务端
+
+`server.ListenAndServe` 使用指定的监听地址和处理器启动一个HTTP服务端
+
+```go
+import (
+	"fmt"
+	"net/http"
+)
+
+// net/http包是对net包的进一步封装，专门用来处理HTTP协议的数据
+func main() {
+	// Handle和HandleFunc函数可以向DefaultServeMux添加处理器。
+	//http.Handle("/foo", fooHandler)
+	http.HandleFunc("/", sayHello)
+	// 使用指定的监听地址和处理器启动一个HTTP服务端,处理器参数通常是nil，这表示采用包变量DefaultServeMux作为处理器。
+	err := http.ListenAndServe("127.0.0.1:9090", nil)
+	if err != nil {
+		fmt.Printf("http server failed, err:%v\n", err)
+		return
+	}
+}
+
+func sayHello(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Hello 美女！")
+}
+```
+
+要管理服务端的行为，可以创建一个自定义的Server：
+
+```go
+s := &http.Server{
+    Addr:           ":8080",
+    Handler:        myHandler,
+    ReadTimeout:    10 * time.Second,
+    WriteTimeout:   10 * time.Second,
+    MaxHeaderBytes: 1 << 20,
+}
+log.Fatal(s.ListenAndServe())
+```
+
+### 客户端
+
+```go
+resp, err := http.Get("http://www.baidu.com/")
+...
+resp, err := http.Post("http://www.baidu.com/upload", "image/jpeg", &buf)
+...
+resp, err := http.PostForm("http://www.baidu.com/form",
+    url.Values{"key": {"Value"}, "id": {"123"}})
+```
+
+程序在使用完response后必须关闭回复的主体：
+
+```go
+resp, err := http.Get("http://www.baidu.com/")
+if err != nil {
+    // handle error
+}
+defer resp.Body.Close()
+body, err := ioutil.ReadAll(resp.Body)
+...
+```
+
+带参数请求：
+
+```go
+-------- GET
+apiUrl := "http://127.0.0.1:9090/get"
+u, err := url.ParseRequestURI(apiUrl)
+if err != nil {
+	fmt.Printf("parse url requestUrl failed,err:%v\n", err)
+}
+
+// URL param
+data := url.Values{}
+data.Set("name", "枯藤")
+data.Set("age", "18")
+u.RawQuery = data.Encode() // URL encode
+fmt.Println(u.String())
+
+resp, err := http.Get(u.String())
+if err != nil {
+	fmt.Println("post failed, err:%v\n", err)
+	return
+}
+defer resp.Body.Close()
+
+b, err := ioutil.ReadAll(resp.Body)
+if err != nil {
+	fmt.Println("get resp failed,err:%v\n", err)
+	return
+}
+fmt.Println(string(b))
+----------- POST
+url := "http://127.0.0.1:9090/post"
+// 表单数据
+contentType := "application/json"
+data := `{"name":"张三","age":18}`
+resp, err := http.Post(url, contentType, strings.NewReader(data))
+if err != nil {
+    fmt.Println("post failed, err:%v\n", err)
+    return
+}
+defer resp.Body.Close()
+
+b, err := ioutil.ReadAll(resp.Body)
+if err != nil {
+    fmt.Println("get resp failed,err:%v\n", err)
+    return
+}
+fmt.Println(string(b))
+```
+
+httpClient控制请求头：
+
+```go
+request, err := http.NewRequest(http.MethodGet, "http://www.baidu.com", nil)
+request.Header.Add("Content-Type", "application/json")
+
+// httpClient
+client := http.Client{
+    CheckRedirect: func(req *http.Request, via []*http.Request) error {
+        fmt.Println("Redirect: ", req)
+        return nil
+    },
+}
+resp, err := client.Do(request)
+if err != nil {
+    panic(err)
+}
+defer resp.Body.Close()
+
+// httputil简化工作
+s, err := httputil.DumpResponse(resp, true)
+if err != nil {
+    panic(err)
+}
+fmt.Printf("%s\n", s)
+```
 
