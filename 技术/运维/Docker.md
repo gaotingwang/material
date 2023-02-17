@@ -234,6 +234,83 @@ $ docker volume inspect vscode
 
 
 
+## Docker 网络
+
+常用命令：
+
+- ip地址查看：`ifconfig`
+- 网路连通性：`ping 192.168.178.1`
+- 端口的连通性：`telnet www.baidu.com 80`
+- 路径探测跟踪：`tracepath www.baidu.com`
+- 请求web服务：`curl www.baidu.com`
+
+<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/docker-network.png" alt="docker-network" style="zoom:70%;" />
+
+```sh
+$ docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+1847e179a316   bridge    bridge    local
+a647a4ad0b4f   host      host      local
+fbd81b56c009   none      null      local
+$ docker network inspect bridge
+[
+    {
+        "Name": "bridge",
+        "Id": "1847e179a316ee5219c951c2c21cf2c787d431d1ffb3ef621b8f0d1edd197b24",
+        "Created": "2021-07-01T15:28:09.265408946Z",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            # docker0 network
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        # 容器网络信息
+        "Containers": {
+            "03494b034694982fa085cc4052b6c7b8b9c046f9d5f85f30e3a9e716fad20741": {
+                "Name": "box1",
+                "EndpointID": "072160448becebb7c9c333dce9bbdf7601a92b1d3e7a5820b8b35976cf4fd6ff",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            },
+            "4f3303c84e5391ea37db664fd08683b01decdadae636aaa1bfd7bb9669cbd8de": {
+                "Name": "box2",
+                "EndpointID": "4cf0f635d4273066acd3075ec775e6fa405034f94b88c1bcacdaae847612f2c5",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+```
+
+
+
 ## Docker 小技巧
 
 批量操作: 
