@@ -264,7 +264,7 @@ $ docker network inspect bridge
         "IPAM": {
             "Driver": "default",
             "Options": null,
-            # docker0 network
+            # docker0 network 相当于网关地址
             "Config": [
                 {
                     "Subnet": "172.17.0.0/16",
@@ -308,6 +308,478 @@ $ docker network inspect bridge
     }
 ]
 ```
+
+自定义bridge：`docker network create -d bridge mybridge`
+
+容器启动时`--network`使用指定的network：`docker run -d -e MYSQL_ROOT_PASSWORD=root --network mybridge -p 3307:3306 --name mysql-network mysql:5.7`
+
+给指定容器绑定网络：`docker network connect mybridge some-mysql` 取消使用`disconnect`
+
+
+
+## Docker Compose
+
+Compose 用于定义和运行多容器 Docker 应用程序的工具。通过 Compose，可以使用 YML 文件来配置应用程序需要的所有服务。然后，使用一个命令，就可以从 YML 文件配置中创建并启动所有服务。
+
+### 安装
+
+Windows和Mac在默认安装了docker desktop以后，docker-compose随之自动安装
+
+```powershell
+PS C:\Users\TW\docker.tips> docker-compose --version
+Docker Compose version v2.15.1
+```
+
+Linux用户需要自行安装，最新版本号可以在这里查询 [Docker Compose 版本号](https://github.com/docker/compose/releases)
+
+```sh
+$ sudo curl -L "https://github.com/docker/compose/releases/download/2.15.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+$ sudo chmod +x /usr/local/bin/docker-compose
+$ docker-compose --version
+docker-compose version 1.29.2, build 5becea4c
+```
+
+### 文件结构
+
+```yaml
+version: "3.8"
+
+# 定义容器
+services:
+  # 容器1，服务名字，这个名字也是内部 bridge网络可以使用的 DNS name
+  frontend:
+    image: awesome/webapp # 镜像的名字
+    ports: # 可选，相当于 docker run里的 -p
+      - "443:8043"
+    networks: # 可选，相当于 docker run里的 --network
+      - front-tier
+      - back-tier
+    configs:
+      - httpd-config
+    secrets:
+      - server-certificate
+    environment: # 可选，相当于 docker run里的 --env
+      - COMPOSE_PROJECT_NAME
+    command: echo "I'm running ${COMPOSE_PROJECT_NAME}" # 可选，如果设置，则会覆盖默认镜像里的 CMD命令
+    volumes: # 可选，相当于docker run里的 -v 
+  # 容器2
+  flask:
+  	build: # 相当于docker build 指定build content目录，及Dockerfile文件名
+      context: ./flask
+      dockerfile: Dockerfile
+    image: flask-demo:latest
+    depends_on:
+      - redis-server
+    volumes:
+      - db-data:/etc/data
+    networks:
+      - back-tier
+  # 容器3
+  redis-server:
+    image: redis:latest
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    networks:
+      - back-tier
+
+# 可选，相当于 docker volume create
+volumes:
+  db-data:
+    driver: flocker
+    driver_opts:
+      size: "10GiB"
+
+configs:
+  httpd-config:
+    external: true
+
+secrets:
+  server-certificate:
+    external: true
+
+# 可选，相当于 docker network create
+networks:
+  front-tier: {}
+  back-tier: {}
+
+```
+
+### 使用
+
+Compose 使用的三个步骤：
+
+- 使用 Dockerfile 定义应用程序的环境。
+- 使用 `docker-compose.yml` 定义构成应用程序的服务，这样它们可以在隔离环境中一起运行。
+- 最后，执行 `docker-compose up` 命令来启动并运行整个应用程序。（`docker-compose`执行，需要在`docker-compose.yml` 所在文件夹执行）
+
+ `docker-compose build` 可以根据Dockfile来构建镜像，`docker-compose pull` 可以拉取镜像和构建镜像
+
+`docker-compose up -d` 可以进行后台运行， `docker-compose logs -f` 可以持续动态的查看日志
+
+`docker-compose ps` 查看应用进程，`docker-compose stop` 停止所有应用
+
+上述文件里的`${REDIS_PASSWORD}` 变量，可在 `docker-compose.yml` 同目录下创建`.env`文件来配置：
+
+```properties
+REDIS_PASSWORD=123
+```
+
+也可手动指定变量的配置文件，在每次命令使用时，通过`docker-compose --env-file .\myenv config`这种方式指定配置文件（`docker-compose` 都需要带着`--env-file`参数）
+
+### 服务更新
+
+1. 修改镜像文件，需要重新build镜像，可以通过`docker-compose up -d --build`
+2. 移除没有定义在Compose中的service `docker-compose up -d --remove-orphans`
+3. 容器重启，`docker-compose restart`
+
+### 水平扩展
+
+`docker-compose up -d --scale flask=3` 通过`--scale`参数，可以实现对flask服务的扩缩容，同时支持负载均衡
+
+### 健康检查
+
+容器本身有一个健康检查的功能，但是需要在Dockerfile里通过`HEALTHCHECK`关键字来定义，或者在执行docker container run 的时候，通过下面的一些参数指定
+
+```sh
+--health-cmd string              Command to run to check health
+--health-interval duration       Time between running the check
+                                (ms|s|m|h) (default 0s)
+--health-retries int             Consecutive failures needed to
+                                report unhealthy
+--health-start-period duration   Start period for the container to
+                                initialize before starting
+                                health-retries countdown
+                                (ms|s|m|h) (default 0s)
+--health-timeout duration        Maximum time to allow one check to
+```
+
+Docker Compose通过`healthcheck`来监测容器状态，`depends_on.condition` 来监测依赖服务是否启动成功
+
+```yaml
+version: "3.8"
+
+services:
+  php:
+    tty: true
+    build:
+      context: .
+      dockerfile: tests/Docker/Dockerfile-PHP
+      args:
+        version: cli
+    volumes:
+      - ./src:/var/www/src
+      - ./tests:/var/www/tests
+      - ./build:/var/www/build
+      - ./phpunit.xml.dist:/var/www/phpunit.xml.dist
+    depends_on:
+      mysql:
+      	# 依赖服务健康状态
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  mysql:
+    image: mysql
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_ROOT_PASSWORD=
+      - MYSQL_DATABASE=cache
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "mysql" ,"-h", "mysql", "-P", "3306", "-u", "root", "-e", "SELECT 1", "cache"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+  postgresql:
+    image: postgres
+    environment:
+      - POSTGRES_PASSWORD=
+      - POSTGRES_DB=cache
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+```
+
+
+
+## Docker Swarm
+
+Docker Compose只适用在单机情况下使用，在生产环境中，需要考虑跨机器做scale横向扩展，容器失败退出时如何新建容器确保服务正常运行，需要管理密码、Key等敏感数据等问题，Docker Swarm就是用于做容器编排管理的。
+
+<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/docker-swarm.png" style="zoom:67%;" />
+
+docker engine默认没有激活swarm模式，可以通过`docker swarm init` 来激活，`docker node ls` 可以查看集群节点信息，`docker swarm leave --force`来退出swarm模式。
+
+To add a worker to this swarm, run the following command:
+
+```sh
+$ docker swarm join --token SWMTKN-1-3y26cfwg7ccslfk5ijktbsowdm3issum8r1yeim6lmlk6kqd9d-8c2h0w50napk2oucwxv3y0zvw 192.168.65.4:2377
+```
+
+当执行`docker swarm init` 主要是PKI和安全相关的自动化：
+
+- 创建swarm集群的根证书
+- manager节点的证书
+- 其它节点加入集群需要的tokens
+- 创建Raft数据库用于存储证书，配置，密码等数据
+
+### service 操作
+
+```sh
+# 创建服务（进行镜像拉取，容器创建）, 须注意docker service 不能进行镜像的构建，只能拉取
+$ docker service create --name web --replicas 2 nginx
+
+# 设置服务的实例个数
+$ docker service update web --replicas 3 (同 docker service scale web=3)
+
+# 查看现有服务
+$ docker service ls
+ID             NAME      MODE         REPLICAS   IMAGE          PORTS
+oivpfwcvtnvh   web       replicated   1/1        nginx:latest
+
+# 查看具体服务下的各实例信息
+$ docker service ps oivp
+ID             NAME      IMAGE          NODE             DESIRED STATE   CURRENT STATE            ERROR     PORTS
+9ntgshptwhqi   web.1     nginx:latest   docker-desktop   Running         Running 8 minutes ago
+fow0yj6s2squ   web.2     nginx:latest   docker-desktop   Running         Running 37 seconds ago
+xat3lo9v7t7a   web.3     nginx:latest   docker-desktop   Running         Running 37 seconds ago
+
+
+# 删除service
+$ docker service rm web
+
+```
+
+### overlay 网络
+
+在swarm集群里的服务，如何对外进行访问，这部分分为两块:
+
+- 第一，`东西向流量` ，也就是不同swarm节点上的容器之间如何通信（不同容器可能在不同机器上），swarm通过 `overlay` 网络来解决；
+- 第二，`南北向流量` ，也就是swarm集群里的容器如何对外访问，比如互联网，这个是 `Linux bridge + iptables NAT` 来解决的
+
+```sh
+# 创建 overlay 网络
+$ docker network create -d overlay mynet
+
+# 服务连接到这个 overlay网络
+$ docker service create --network mynet --name test --replicas 2 busybox ping 8.8.8.8
+
+$ docker container ls
+$ docker container exec -it cac sh
+/ # ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+    valid_lft forever preferred_lft forever
+24: eth0@if25: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1450 qdisc noqueue
+    link/ether 02:42:0a:00:01:08 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.1.8/24 brd 10.0.1.255 scope global eth0
+    valid_lft forever preferred_lft forever
+26: eth1@if27: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue
+    link/ether 02:42:ac:12:00:03 brd ff:ff:ff:ff:ff:ff
+    inet 172.18.0.3/16 brd 172.18.255.255 scope global eth1
+    valid_lft forever preferred_lft forever
+/ #
+```
+
+这个容器有两个接口 eth0和eth1， 其中eth0是连到了mynet这个网络，eth1是连到docker_gwbridge这个网络
+
+### ingress 网络
+
+外部如何访问部署运行在swarm集群内的服务，在swarm里通过 `ingress` 来解决。docker swarm的ingress网络又叫 `Ingress Routing Mesh`，主要是为了实现把service的服务端口对外发布出去，让其能够被外部网络访问到。
+
+```sh
+$ docker service create --name web --network mynet -p 8080:80 --replicas 2 containous/whoami
+
+$ docker service ls
+ID             NAME      MODE         REPLICAS   IMAGE                      PORTS
+a9cn3p0ovg5j   web       replicated   2/2        containous/whoami:latest   *:8080->80/tcp
+
+$ curl 192.168.200.10:8080
+$ curl 192.168.200.11:8080
+$ curl 192.168.200.12:8080
+```
+
+会在每个swarm节点的IP加端口8080，每个节点IP:8080都可以访问，并且回应的容器是不同的（hostname），也就是有负载均衡的效果
+
+### stack部署多service应用
+
+1. 准备工作
+
+   ```sh
+   # 使用compose构建镜像
+   $ docker-compose build
+   
+   # 提交镜像到dockerhub
+   $ docker login
+   $ docker-compose push
+   ```
+
+2. 通过stack启动服务
+
+   ```yaml
+   version: "3.9"
+   
+   services:
+     vote:
+       image: dockersamples/examplevotingapp_vote
+       ports:
+         - 5000:80
+       networks:
+         - frontend
+       # 指定deploy 实例的个数
+       deploy:
+         replicas: 2
+         
+     worker:
+       image: dockersamples/examplevotingapp_worker
+       networks:
+         - frontend
+         - backend
+       deploy:
+         placement:
+         	constraints: [node.role == manager] # 部署在manager节点
+   ```
+
+   
+
+   ```sh
+   # 使用compose文件开始部署
+   $ docker stack deploy --compose-file docker-compose.yml flask-demo
+   
+   # 查看stack列表
+   $ docker stack ls
+   NAME         SERVICES   ORCHESTRATOR
+   flask-demo   2          Swarm
+   
+   # 查看具体stack内容
+   $ docker stack ps flask-demo
+   ID             NAME                        IMAGE                            NODE            DESIRED STATE   CURRENT STATE
+   ERROR     PORTS
+   lzm6i9inoa8e   flask-demo_flask.1          xiaopeng163/flask-redis:latest   swarm-manager   Running         Running 23 seconds ago
+   ejojb0o5lbu0   flask-demo_redis-server.1   redis:latest                     swarm-worker2   Running         Running 21 seconds ago
+   
+   # 查看具体stack对应的service列表
+   $ docker stack services flask-demo
+   ID             NAME                      MODE         REPLICAS   IMAGE                            PORTS
+   mpx75z1rrlwn   flask-demo_flask          replicated   1/1        xiaopeng163/flask-redis:latest   *:8080->5000/tcp
+   z85n16zsldr1   flask-demo_redis-server   replicated   1/1        redis:latest
+   
+   $ docker service ls
+   ID             NAME                      MODE         REPLICAS   IMAGE                            PORTS
+   mpx75z1rrlwn   flask-demo_flask          replicated   1/1        xiaopeng163/flask-redis:latest   *:8080->5000/tcp
+   z85n16zsldr1   flask-demo_redis-server   replicated   1/1        redis:latest
+   
+   $ curl 127.0.0.1:8080
+   Hello Container World! I have been seen 1 times and my hostname is 21d63a8bfb57.
+   ```
+
+### 使用 secret
+
+1. 创建
+
+   ```sh
+   # 从标准的输入读取
+   $ echo hello | docker secret create mysql_pass -
+   
+   # 从文件读取
+   $ echo world > pass.txt
+   $ docker secret create pass_word pass.txt
+   
+   # 查看secret
+   $ docker secret ls
+   ID                          NAME         DRIVER    CREATED          UPDATED
+   px38wqko11jqhfwbpxt0ojw8g   mysql_pass             3 minutes ago    3 minutes ago
+   zzpk7lhy5ayc16eto976ja4m9   pass_word              15 seconds ago   15 seconds ago
+   $ docker secret inspect mysql_pass
+   ```
+
+2. 使用
+
+   ```sh
+   # 通过--secret 会将mysql_pass存放在容器/run/secrets/mysql_pass文件中
+   $ docker service create --name mysql-demo --secret mysql_pass --env MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql_pass mysql:5.7
+   ```
+
+3. 在Compose中使用
+
+   ```yaml
+   version: "3.9"
+   
+   services:
+      db:
+        image: mysql:latest
+        environment:
+          MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+          MYSQL_DATABASE: wordpress
+          MYSQL_USER: wordpress
+          MYSQL_PASSWORD_FILE: /run/secrets/db_password
+        # 导入secret到/run/secrets目录下的对应文件中
+        secrets:
+          - db_root_password
+          - db_password
+   
+   # 会创建 secrets
+   secrets:
+      db_password:
+        file: db_password.txt
+      db_root_password:
+        file: db_root_password.txt
+   ```
+
+### 使用 local volume
+
+```yaml
+version: "3.8"
+
+services:
+  db:
+    image: mysql:5.7
+    environment:
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql_pass
+    secrets:
+      - mysql_pass
+    volumes:
+      # 将data volume挂载到本地/var/lib/mysql目录下
+      - data:/var/lib/mysql
+
+# volume create name=data
+volumes:
+  data:
+
+secrets:
+  mysql_pass:
+    file: mysql_pass.txt
+```
+
+
+
+## 多架构支持
+
+```sh
+$ docker buildx create --name mybuilder --use
+
+$ docker buildx ls
+
+# 会在一个容器内进行build, 构建完成 docker images 并不会查到创建好的镜像
+# --push 会直接push到dochub
+$ docker buildx build --push --platform linux/arm/v7,linux/arm64/v8,linux/amd64 -t gaotingwang/flask-redis:latest .
+```
+
+
+
+## CI / CD
+
+持续集成，可利用Git Actions进行，参考文档[Actions](https://docs.github.com/zh/actions)
 
 
 
