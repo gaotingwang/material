@@ -342,3 +342,373 @@ $ ln -s file1 file2
 ![软链接](https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/%E8%BD%AF%E9%93%BE%E6%8E%A5.jpg)
 
 其实 `file2` 只是 `file1` 的一个快捷方式，它指向的是 `file1` ，所以显示的是 `file1` 的内容，但其实 `file2` 的 `inode` 与 `file1` 并不相同。如果删除了 `file2` 的话， `file1` 是不会受影响的，但如果删除 `file1` 的话， `file2` 就会变成死链接，因为指向的文件不见了。
+
+### 文件查找
+
+#### locate
+
+搜索包含关键字的所有文件和目录。后接需要查找的文件名，也可以用正则表达式。
+
+##### 安装 locate
+
+```shell
+$ yum -y install mlocate       --> 安装包
+$ updatedb                     --> 更新数据库
+$ locate file.txt
+$ locate fil*.txt
+```
+
+[注意] `locate` 命令会去文件数据库中查找命令，而不是全磁盘查找，因此刚创建的文件并不会更新到数据库中，所以无法被查找到，可以执行 `updatedb` 命令去更新数据库。
+
+#### find
+
+用于查找文件，它会去遍历你的实际硬盘进行查找，而且它允许我们对每个找到的文件进行后续操作，功能非常强大。
+
+```shell
+$ find <何处> <何物> <做什么>
+```
+
+- 何处：指定在哪个目录查找，此目录的所有子目录也会被查找。
+- 何物：查找什么，可以根据文件的名字来查找，也可以根据其大小来查找，还可以根据其最近访问时间来查找。
+- 做什么：找到文件后，可以进行后续处理，如果不指定这个参数， `find` 命令只会显示找到的文件。
+
+##### 根据文件名查找
+
+```shell
+find -name "file.txt"             --> 当前目录以及子目录下通过名称查找文件
+find . -name "syslog"             --> 当前目录以及子目录下通过名称查找文件
+find / -name "syslog"             --> 整个硬盘下查找syslog
+find /var/log -name "syslog"      --> 在指定的目录/var/log下查找syslog文件
+find /var/log -name "syslog*"     --> 查找syslog1、syslog2 ... 等文件，通配符表示所有
+find /var/log -name "*syslog*"    --> 查找包含syslog的文件 
+```
+
+[注意] `find` 命令只会查找完全符合 “何物” 字符串的文件，而 `locate` 会查找所有包含关键字的文件。
+
+##### 根据文件大小查找
+
+```shell
+find /var -size +10M              --> /var 目录下查找文件大小超过 10M 的文件
+find /var -size -50k              --> /var 目录下查找文件大小小于 50k 的文件
+find /var -size +1G               --> /var 目录下查找文件大小查过 1G 的文件
+find /var -size 1M                --> /var 目录下查找文件大小等于 1M 的文件
+```
+
+##### 根据文件最近访问时间查找
+
+```shell
+find -name "*.txt" -atime -7      --> 近 7天内访问过的.txt结尾的文件
+```
+
+##### 仅查找目录或文件
+
+```shell
+find . -name "file" -type f       --> 只查找当前目录下的file文件
+find . -name "file" -type d       --> 只查找当前目录下的file目录
+```
+
+##### 操作查找结果
+
+```shell
+find -name "*.txt" -printf "%p - %u\n"    --> 找出所有后缀为txt的文件，并按照 %p - %u\n 格式打印，其中%p=文件名，%u=文件所有者
+find -name "*.jpg" -delete                --> 删除当前目录以及子目录下所有.jpg为后缀的文件，不会有删除提示，因此要慎用
+find -name "*.c" -exec chmod 600 {} \;    --> 对每个.c结尾的文件，都进行 -exec 参数指定的操作，{} 会被查找到的文件替代，\; 是必须的结尾
+find -name "*.c" -ok chmod 600 {} \;      --> 和上面的功能一致，会多一个确认提示
+```
+
+
+
+## 用户与权限
+
+### 用户操作
+
+`Linux` 是一个多用户的操作系统。在 `Linux` 中，理论上来说，我们可以创建无数个用户，但是这些用户是被划分到不同的群组里面的，有一个用户，名叫 `root` ，是一个很特殊的用户，它是超级用户，拥有最高权限。
+
+自己创建的用户是有限权限的用户，这样大大提高了 `Linux` 系统的安全性，有效防止误操作或是病毒攻击，但是我们执行的某些命令需要更高权限时可以使用 `sudo` 命令。
+
+#### sudo
+
+以 `root` 身份运行命令
+
+```shell
+$ sudo date            --> 当然查看日期是不需要sudo的这里只是演示，sudo 完之后一般还需要输入用户密码的
+```
+
+#### useradd + passwd
+
+- `useradd` 添加新用户
+
+   `-r` 建立系统帐号，`-g <群组>` 指定用户所属的群组，`-m` 制定用户的登入目录。
+
+- `passwd` 修改用户密码
+
+这两个命令需要 `root` 用户权限
+
+使用 `useradd` 指令所建立的帐号，实际上是保存在 `/etc/passwd` 文本文件中
+
+```shell
+$ useradd lion         --> 添加一个lion用户，添加完之后在 /home 路径下可以查看
+$ passwd lion          --> 修改lion用户的密码
+```
+
+#### userdel
+
+删除用户，需要 `root` 用户权限
+
+```shell
+$ userdel lion          --> 只会删除用户名，不会从/home中删除对应文件夹
+$ userdel -r lion       --> 会同时删除/home下的对应文件夹
+```
+
+#### su
+
+切换用户，需要 `root` 用户权限
+
+```shell
+$ sudo su               --> 切换为root用户（exit 命令或 CTRL + D 快捷键都可以使普通用户切换为 root 用户）
+$ su lion               --> 切换为普通用户
+$ su -                  --> 切换为root用户
+```
+
+### 群组的管理
+
+`Linux` 中每个用户都属于一个特定的群组，如果你不设置用户的群组，默认会创建一个和它的用户名一样的群组，并且把用户划归到这个群组。
+
+#### groupadd
+
+创建群组，用法和 `useradd` 类似。
+
+```shell
+$ groupadd friends
+```
+
+#### groupdel
+
+删除一个已存在的群组
+
+```shell
+$ groupdel foo                 --> 删除foo群组
+```
+
+#### groups
+
+查看用户所在群组
+
+```shell
+$ useradd -g friends -r lion   --> 创建lion用户，将其加到friends用户组
+$ groups lion                  --> 查看 lion 用户所在的群组
+```
+
+#### usermod
+
+用于修改用户的账户。
+
+【常用参数】
+
+- `-l`： 对用户重命名。需要注意的是 `/home` 中的用户家目录的名字不会改变，需要手动修改。
+- `-g`： 修改用户所在的群组，例如 `usermod -g friends lion` 修改 `lion` 用户的群组为 `friends` 。
+- `-G`： 一次性让用户添加多个群组，例如 `usermod -G friends,foo,bar lion` 。
+- `-a`： `-G` 会让你离开原先的群组，如果你不想这样做的话，就得再添加 `-a` 参数，意味着 `append` 追加的意思。
+
+#### chgrp
+
+用于修改文件的群组。
+
+```shell
+$ chgrp [–R] bar file.txt           --> file.txt文件的群组修改为bar
+```
+
+#### chown
+
+改变文件的所有者，需要 `root` 身份才能运行。
+
+```Shell
+$ chown lion file.txt          --> 把其它用户创建的file.txt转让给lion用户
+$ chown lion:bar file.txt      --> 把file.txt的用户改为lion，群组改为bar
+```
+
+【常用参数】
+
+- `-R` 递归设置子目录和子文件， `chown -R lion:lion /home/frank` 把 `frank` 文件夹的用户和群组都改为 `lion` 。
+
+### 文件权限管理
+
+#### chmod
+
+修改访问权限。
+
+```shell
+$ chmod 740 file.txt
+```
+
+【常用参数】
+
+- `-R` 可以递归地修改文件访问权限，例如 `chmod -R 777 /home/lion`
+
+修改权限的确简单，但是理解其深层次的意义才是更加重要的。下面系统的学习 `Linux` 的文件权限：
+
+```shell
+[root@lion ~]# ls -l
+drwxr-xr-x 5 root root 4096 Apr 13  2020 climb
+lrwxrwxrwx 1 root root    7 Jan 14 06:41 hello2.c -> hello.c
+-rw-r--r-- 1 root root  149 Jan 13 06:14 hello.c
+```
+
+在 Linux 中第一个字符代表这个文件是目录、文件或链接文件等等。
+
+- 当为 `d` 则是目录
+- 当为 `-` 则是文件；
+- 若是 `l` 则表示为链接文档(link file)；
+- 若是 `b` 则表示为装置文件里面的可供储存的接口设备(可随机存取装置)；
+- 若是 `c` 则表示为装置文件里面的串行端口设备，例如键盘、鼠标(一次性读取装置)。
+
+第 **0** 位确定文件类型，第 **1-3** 位确定属主（该文件的所有者）拥有该文件的权限；第4-6位确定属组（所有者的同组用户）拥有该文件的权限；第7-9位确定其他用户拥有该文件的权限。
+
+接下来的字符中，以三个为一组，且均为 `rwx` 的三个参数的组合。其中， `r` 代表可读(read)、 `w` 代表可写(write)、 `x` 代表可执行(execute)。 要注意的是，这三个权限的位置不会改变，如果没有权限，就会出现减号 `-` 。
+
+现在再来理解这句权限 `drwxr-xr-x` 的意思：
+
+- 它是一个文件夹；
+- 它的所有者具有：读、写、执行权限；
+- 它的群组用户具有：读、执行的权限，没有写的权限；
+- 它的其它用户具有：读、执行的权限，没有写的权限。
+
+`chmod` 它是不需要 `root` 用户才能运行的，只要你是此文件所有者，就可以用 `chmod` 来修改文件的访问权限。
+
+##### 数字分配权限
+
+可以使用数字来代表各个权限，各权限的分数对照如下：
+
+- `r`：4
+- `w`：2
+- `x`：1
+
+```shell
+$ chmod 640 hello.c 
+
+# 分析
+6 = 4 + 2 + 0 表示所有者具有 rw 权限
+4 = 4 + 0 + 0 表示群组用户具有 r 权限
+0 = 0 + 0 + 0 表示其它用户没有权限
+
+对应文字权限为：-rw-r-----
+```
+
+##### 用字母来分配权限
+
+- `u` ： `user` 的缩写，用户的意思，表示所有者。
+- `g` ： `group` 的缩写，群组的意思，表示群组用户。
+- `o` ： `other` 的缩写，其它的意思，表示其它用户。
+- `a` ： `all` 的缩写，所有的意思，表示所有用户。
+- `+` ：加号，表示添加权限。
+- `-` ：减号，表示去除权限。
+- `=` ：等于号，表示分配权限。
+
+```shell
+chmod u+rx file               --> 文件file的所有者增加读和运行的权限
+chmod g+r file                --> 文件file的群组用户增加读的权限
+chmod o-r file                --> 文件file的其它用户移除读的权限
+chmod g+r o-r file            --> 文件file的群组用户增加读的权限，其它用户移除读的权限
+chmod go-r file               --> 文件file的群组和其他用户移除读的权限
+chmod +x file                 --> 文件file的所有用户增加运行的权限
+chmod u=rwx,g=r,o=- file      --> 文件file的所有者分配读写和执行的权限，群组其它用户分配读的权限，其他用户没有任何权限
+```
+
+
+
+## 软件仓库
+
+`Linux` 下软件是以包的形式存在，一个软件包其实就是软件的所有文件的压缩包，是二进制的形式，包含了安装软件的所有指令。 `Red Hat` 家族的软件包后缀名一般为 `.rpm` ， `Debian` 家族的软件包后缀是 `.deb` 。
+
+`Linux` 的包都存在一个仓库，叫做软件仓库，它可以使用 `yum` 来管理软件包， `yum` 是 `CentOS` 中默认的包管理工具，适用于 `Red Hat` 一族。可以理解成 `Node.js` 的 `npm` 。
+
+### yum 常用命令
+
+- `yum update | yum upgrade` 更新软件包
+- `yum search xxx` 搜索相应的软件包
+- `yum install xxx` 安装软件包
+- `yum remove xxx` 删除软件包
+
+### 切换 CentOS 软件源
+
+有时候 `CentOS` 默认的 `yum` 源不一定是国内镜像，导致 `yum` 在线安装及更新速度不是很理想。这时候需要将 `yum` 源设置为国内镜像站点。国内主要开源的镜像站点是网易和阿里云。
+
+1、首先备份系统自带 `yum` 源配置文件 `mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.backup`
+
+2、下载阿里云的 `yum` 源配置文件到 `/etc/yum.repos.d/CentOS7`
+
+```shell
+$ wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
+```
+
+3、生成缓存
+
+```shell
+$ yum makecache
+```
+
+
+
+## 阅读手册
+
+`Linux` 命令种类繁杂，凭借记忆不可能全部记住，因此学会查用手册是非常重要的。
+
+### man
+
+#### 安装更新 man
+
+```shell
+sudo yum install -y man-pages     --> 安装
+sudo mandb                        --> 更新
+```
+
+#### man 手册种类
+
+1. 可执行程序或 `Shell` 命令；
+2. 系统调用（ `Linux` 内核提供的函数）；
+3. 库调用（程序库中的函数）；
+4. 文件（例如 `/etc/passwd` ）；
+5. 特殊文件（通常在 `/dev` 下）；
+6. 游戏；
+7. 杂项（ `man(7)` ，`groff(7)` ）；
+8. 系统管理命令（通常只能被 `root` 用户使用）；
+9. 内核子程序。
+
+#### man + 数字 + 命令
+
+输入 man + 数字 + 命令/函数，可以查到相关的命令和函数，若不加数字， `man` 默认从数字较小的手册中寻找相关命令和函数
+
+```shell
+$ man 3 rand               --> 表示在手册的第三部分查找 rand 函数
+$ man ls                   --> 查找 ls 用法手册
+```
+
+man 手册核心区域解析：(以 `man pwd` 为例)
+
+```shell
+NAME # 命令名称和简单描述
+     pwd -- return working directory name
+
+SYNOPSIS # 使用此命令的所有方法
+     pwd [-L | -P]
+
+DESCRIPTION # 包括所有参数以及用法
+     The pwd utility writes the absolute pathname of the current working directory to the standard output.
+
+     Some shells may provide a builtin pwd command which is similar or identical to this utility.  Consult the builtin(1) manual page.
+
+     The options are as follows:
+
+     -L      Display the logical current working directory.
+
+     -P      Display the physical current working directory (all symbolic links resolved).
+
+     If no options are specified, the -L option is assumed.
+
+SEE ALSO # 扩展阅读相关命令
+     builtin(1), cd(1), csh(1), sh(1), getcwd(3)
+```
+
+### help
+
+`man` 命令像新华词典一样可以查询到命令或函数的详细信息，但其实我们还有更加快捷的方式去查询， `command \--help` 或 `command \-h` ，它没有 `man` 命令显示的那么详细，但是它更加易于阅读。
