@@ -1,8 +1,6 @@
-Kubernetes
-
-<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/kubernetes/%E6%9E%B6%E6%9E%84.jpeg" alt="架构" style="zoom:60%;" />
-
 # 环境准备
+
+<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/kubernetes/%E5%AE%9E%E6%88%98%E7%BB%93%E6%9E%84.jpeg" alt="架构" style="zoom:60%;" />
 
 ## Virtualbox安装CentOS配置
 
@@ -43,7 +41,7 @@ Kubernetes
   ONBOOT=yes
   # 为静态 IP
   BOOTPROTO=static
-  IPADDR=192.168.99.101
+  IPADDR=192.168.56.101
   ```
 
   重启网络：
@@ -58,9 +56,9 @@ Kubernetes
 
   ```shell
   $ vim /etc/hosts
-  192.168.99.101 master
-  192.168.99.102 node1
-  192.168.99.103 node2
+  192.168.56.101 master
+  192.168.56.102 node1
+  192.168.56.103 node2
   
   # 设置域名解析器服务
   $ vim /etc/resolv.conf
@@ -561,7 +559,7 @@ $ kubectl -n kube-system describe $(kubectl -n kube-system get secret -n kube-sy
 
 # 调度单元Pod
 
-
+cd
 
 
 
