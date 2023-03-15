@@ -244,7 +244,7 @@ $ docker volume inspect vscode
 - 路径探测跟踪：`tracepath www.baidu.com`
 - 请求web服务：`curl www.baidu.com`
 
-<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/docker-network.png" alt="docker-network" style="zoom:70%;" />
+<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/docker/docker-network.png" alt="docker-network" style="zoom:70%;" />
 
 ```sh
 $ docker network ls
@@ -515,7 +515,7 @@ services:
 
 Docker Compose只适用在单机情况下使用，在生产环境中，需要考虑跨机器做scale横向扩展，容器失败退出时如何新建容器确保服务正常运行，需要管理密码、Key等敏感数据等问题，Docker Swarm就是用于做容器编排管理的。
 
-<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/docker-swarm.png" style="zoom:67%;" />
+<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/docker/docker-swarm.png" style="zoom:67%;" />
 
 docker engine默认没有激活swarm模式，可以通过`docker swarm init` 来激活，`docker node ls` 可以查看集群节点信息，`docker swarm leave --force`来退出swarm模式。
 
@@ -795,5 +795,99 @@ $ docker system prune -f
 $ docker image prune -a
 # volume 清除
 $ docker volume prune -f
+```
+
+
+
+## 私有仓库搭建
+
+### 容器镜像中心
+
+- 官方Dockerhub
+- 其他镜像仓库，如阿里云镜像仓库
+
+```shell
+# 配置国内 Docker 镜像源
+$ vi /etc/docker/daemon.json
+{
+    "registry-mirrors": ["https://registry.docker-cn.com"],
+    "live-restore": true
+}
+
+# 重启 docker 服务
+$ systemctl restart docker
+```
+
+### 搭建私有镜像中心
+
+#### 安装 JFrog Container Registry(JCR) 
+
+```shell
+# 在master节点执行
+# 增加 JFROG_HOME 环境变量
+$ vi ~/.bash_profile
+export JFROG_HOME=/etc
+$ source ~/.bash_profile
+
+# 创建挂载目录
+$ mkdir -p $JFROG_HOME/artifactory/var/etc/
+$ cd $JFROG_HOME/artifactory/var/etc/
+$ touch ./system.yaml
+$ chown -R 1030:1030 $JFROG_HOME/artifactory/var
+$ chmod -R 777 $JFROG_HOME/artifactory/var
+
+# 启动 JCR
+$ docker run --name artifactory-jcr -v $JFROG_HOME/artifactory/var/:/var/opt/jfrog/artifactory -d -p 8081:8081 -p 8082:8082 releases-docker.jfrog.io/jfrog/artifactory-jcr:latest
+
+# 访问 192.168.56.101:8081（master节点ip） 可以看到初始化页面
+```
+
+#### 配置私有镜像中心
+
+```shell
+# 在 Master，node 节点上分别配置 JCR 的本地域名解析
+$ vi /etc/hosts
+192.168.56.101 master art.local
+192.168.56.102 node1
+192.168.56.103 node2
+
+# 配置Docker insecure registry
+$ vi /etc/docker/daemon.json
+{
+    "registry-mirrors":[
+        "https://registry.docker-cn.com",
+        "https://dockerhub.azk8s.cn",
+        "https://reg-mirror.qiniu.com",
+        "http://hub-mirror.c.163.com",
+        "https://docker.mirrors.ustc.edu.cn"
+    ],
+    "insecure-registries":[
+        "art.local:8081"
+    ]
+}
+
+$ systemctl restart docker
+
+# 访问地址 http://192.168.56.101:8081 在页面上初始化 JCR，设置登录账号密码
+
+# 执行 docker login
+# docker login art.local:8081
+```
+
+#### 配置 JCR 仓库
+
+登录 JCR 并创建 5 个仓库：docker-local, docker-test, docker-release, docker-remote 和 docker virtual 仓库
+
+<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/docker/JCR%E4%BB%93%E5%BA%93.png" style="zoom:60%;" />
+
+#### 镜像推送到私有镜像中心
+
+```shell
+# 登录镜像中心，并上传镜像
+$ docker login art.local:8081 admin/password
+$ docker tag registry.cn-beijing.aliyuncs.com/qingfeng666/kubeblog:1.0 art.local:8081/docker-local/kubeblog:1.0
+$ docker push art.local:8081/docker-local/kubeblog:1.0
+
+# 登录 JCR 查看推送的镜像
 ```
 
