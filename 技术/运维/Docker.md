@@ -472,7 +472,7 @@ services:
       - ./phpunit.xml.dist:/var/www/phpunit.xml.dist
     depends_on:
       mysql:
-      	# 依赖服务健康状态
+        # 依赖服务健康状态
         condition: service_healthy
       postgresql:
         condition: service_healthy
