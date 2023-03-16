@@ -74,9 +74,19 @@ node-exporter用于提供Unix内核的硬件以及系统指标，采集服务器
         hostNetwork: true
         hostPID: true
   ```
+  与 DaemonSet 中的 Pod 进行通信的几种可能模式如下：
+
+  - NodeIP 和已知端口：DaemonSet 中的 Pod 可以使用 `hostPort` ，从而可以通过节点 IP 访问到Pod。客户端能通过某种方法获取节点 IP 列表，并且基于此也可以获取到相应的端口。
+  - DNS：创建具有相同 Pod 选择器的无头服务通过使用 `endpoints` 资源或从 DNS 中检索到多个 A 记录来发现 DaemonSet。
+  - Service：创建具有相同 Pod 选择器的服务，并使用该服务随机访问到某个节点上的守护进程（没有办法访问到特定节点）。  
 
   ```shell
   $ kubectl apply -f node-exporter-daemonset.yml
+  
+  # 使用宿主机网络，开放宿主机端口9100，可以直接通过<node_ip>:9100访问 curl node_ip:9100
+  $ kubectl get po -n monitoring -o wide
+  NAME                             READY   STATUS    RESTARTS   AGE   IP               NODE    NOMINATED NODE   READINESS GATES
+  prometheus-node-exporter-dh8cm   1/1     Running   0          26m   192.168.56.102   node1   <none>           <none>
   ```
 
 - 部署node-exporter service  
@@ -97,7 +107,6 @@ node-exporter用于提供Unix内核的硬件以及系统指标，采集服务器
     type: ClusterIP
     clusterIP: None
     ports:
-      # 使用宿主机网络，开放宿主机端口9100，可以直接通过<node_ip>:9100访问
       - name: prometheus-node-exporter
         port: 9100
         protocol: TCP

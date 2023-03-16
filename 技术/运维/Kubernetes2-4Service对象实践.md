@@ -42,7 +42,7 @@ Kubernetes 支持两种基本的服务发现模式 —— 环境变量和 DNS
 
   当 Pod 运行在 Node 上，kubelet 会为每个活跃的 Service 添加一组环境变量。 它同时支持 Docker links 、 简单的 `{SVCNAME}_SERVICE_HOST` 和 `{SVCNAME}_SERVICE_PORT` 变量。 这里 Service 的名称需大写，横线被转换成下划线。
 
-  举个例子，一个名称为 “my-nginx” 的 Service 暴露了 TCP 端口 80， 同时给它分配了 Cluster IP 地址 10.1.153.168。这个 Service 生成了如下环境变量： 
+  举个例子，一个名称为 “my-nginx” 的 Service 暴露了 TCP 端口 80， 同时给它分配了 Cluster IP 地址 10.1.153.168。这个 Service 为Pod中容器生成了如下环境变量： 
 
   ```properties
   MY_NGINX_PORT=tcp://10.1.153.168:80
@@ -100,9 +100,9 @@ Kubernetes 支持两种基本的服务发现模式 —— 环境变量和 DNS
   
   ```
 
-  Pod 将看到自己的域名为：`busybox-1.default-subdomain.default.svc.cluster.local`。DNS 会为此名字提供一个 A 记录或 AAAA 记录，指向该 Pod 的 IP。
+  进入容器通过`hostname -f`看到自己的域名为：`busybox-1.default-subdomain.default.svc.cluster.local`。DNS 会为此名字提供一个 A 记录或 AAAA 记录，指向该 Pod 的 IP。
 
-## 从集群外部访问Service
+## 集群外部访问Service
 
 Service 暴露方式：`ExternalName`、`ClusterIP`、`NodePort`、 and `LoadBalancer`，默认为`ClusterIP`
 
@@ -170,6 +170,32 @@ nginx        NodePort    10.1.245.61   <none>        80:30001/TCP   3m47s
 # 访问节点地址对应端口，可以请求到数据
 $ curl 192.168.56.102:30001
 ```
+
+## 图解析 Pod 网络通信机制
+
+### 同主机 Pod 网络通信
+
+<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/kubernetes/%E5%90%8C%E4%B8%BB%E6%9C%BAPod%E7%BD%91%E7%BB%9C%E9%80%9A%E4%BF%A1.png" style="zoom:90%;" />
+
+主机上Pod1 访问 Pod2 的流程：
+
+1. 数据包从 Pod1 的 netns 中 eth1 网卡，通过虚拟网卡 veth1 到达宿主机的root cni0网卡，寻求Pod2 的地址。
+2. 数据包通过 cni0 网卡重定向到 veth2。
+3. 数据包立刻 cni0 到达 veth2。
+4. 数据包离开 root netns 到达 Pod2 的 eth2 网卡，并完成通信。
+
+### 跨主机 Pod 通信机制
+
+<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/kubernetes/%E8%B7%A8%E4%B8%BB%E6%9C%BAPod%E9%80%9A%E4%BF%A1%E6%9C%BA%E5%88%B6.png" style="zoom:90%;" />
+
+Po1 到 Pod3 的网络通信流程：  
+
+1. 数据包从 Node1 的 Pod1 的 netns 中 eth1 网卡，通过虚拟网卡 veth1 到达宿主机的root cni0网卡，寻求 Pod3 的地址。
+2. 数据包通过 cni0 网卡重定向到 Node1 的 eth0。
+3. 数据包从Node1 eth0离开，到达网关。
+4. 数据包从网关到达 Node2 的 eth0.
+5. 数据包从 Node2 的 eth0 到达cni0, 寻找 Pod 3的地址。
+6. 数据离开 cni0 到达 Veth3，并通过 Node2 的 root netns 找到 eth3 的网卡。  
 
 ## Ingress 控制器
 
@@ -590,4 +616,6 @@ spec:
 ```
 
 重新部署Ingress控制器，从其他节点`curl node1  `可看到结果返回
+
+
 

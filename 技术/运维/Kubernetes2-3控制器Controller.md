@@ -132,9 +132,8 @@ StatefulSets 使用场景：
 
 - StatefulSet 当前需要`headless`服务来负责 Pod 的网络标识
 
-  有时候创建的服务不想走负载均衡，想直接通过pod-ip链接后端，可以使用`headless service`接可以解决。`headless service` 是将service的发布文件中的
-  `clusterip=none` ，不让其获取`clusterip` ， **DNS解析的时候直接走pod**
-
+  headless使用场景：有时候创建的服务不想走负载均衡，想直接通过pod-ip链接后端，可以使用`headless service`接可以解决。`headless service` 是将service的发布文件中的`clusterip=none` ，不让其获取`clusterip` ， **DNS解析的时候直接走pod**
+  
 - 当删除 StatefulSets 时，StatefulSet 不提供任何终止 Pod 的保证。
 
 - 为了实现 StatefulSet 中的 Pod可以有序和优雅的终止，可以在删除之前将 StatefulSet 缩放为 0  
@@ -244,11 +243,18 @@ volumeClaimTemplates:
 
 ```shell
 # 查看 pod
-$ kubectl get po -o wide
-NAME    READY   STATUS    RESTARTS   AGE     IP            NODE    NOMINATED NODE   READINESS GATES
-web-0   1/1     Running   0          3m43s   10.244.1.56   node1   <none>           <none>
-web-1   1/1     Running   0          2m45s   10.244.1.57   node1   <none>           <none>
-web-2   1/1     Running   0          2m41s   10.244.1.58   node1   <none>           <none>
+$ kc get all -o wide
+NAME        READY   STATUS    RESTARTS   AGE   IP             NODE    NOMINATED NODE   READINESS GATES
+pod/web-0   1/1     Running   0          29s   10.244.1.119   node1   <none>           <none>
+pod/web-1   1/1     Running   0          24s   10.244.1.120   node1   <none>           <none>
+pod/web-2   1/1     Running   0          21s   10.244.1.121   node1   <none>           <none>
+
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE   SELECTOR
+service/kubernetes   ClusterIP   10.1.0.1     <none>        443/TCP   8d    <none>
+service/nginx        ClusterIP   None         <none>        80/TCP    29s   app=nginx
+
+NAME                   READY   AGE   CONTAINERS   IMAGES
+statefulset.apps/web   3/3     29s   nginx        registry.cn-beijing.aliyuncs.com/qingfeng666/nginx
 
 # 每个副本都使用独立的存储data1-3目录， 并挂载在/usr/share/nginx/html路径
 # 存储独立性验证
@@ -259,7 +265,7 @@ $ cd /usr/share/nginx/html
 # 登录 web-1 pod，进入相同目录，会发现该目录并没有 1.txt 文件，此时就证明了 statefulset 的 pod存储是互相独立的
 
 # 访问该 nginx 服务
-$ curl 10.244.1.67
+$ curl 10.244.1.119
 ```
 
 ## DeamonSet 后台任务
@@ -303,8 +309,9 @@ spec:
 
 ```shell
 $ kubectl -n kube-system get po -o wide | grep fluentd
-fluentd-elasticsearch-7vncc      1/1     Running   0          2m2s   10.244.0.14      master   <none>           <none>
-fluentd-elasticsearch-r8fc8      1/1     Running   0          2m2s   10.244.1.55      node1    <none>           <none>
+NAME                             READY   STATUS    RESTARTS   AGE   IP               NODE     NOMINATED NODE   READINESS GATES
+fluentd-elasticsearch-5z5jb      1/1     Running   0          20s   10.244.1.122     node1    <none>           <none>
+fluentd-elasticsearch-cn6sv      1/1     Running   0          20s   10.244.0.39      master   <none>           <none>
 ```
 
 与 DaemonSet 中的 Pod 进行通信的几种可能模式如下：
