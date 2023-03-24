@@ -474,7 +474,10 @@ func main() {
   go env -w GO111MODULE=on
   # 设置国内镜像
   go env -w GOPROXY=https://goproxy.cn,direct
+  # 可以对私有仓库不设置代理
+  go env -w GOPRIVATE=*.xxx.com
   # goimports
+  # go get 内部使用https的clone命令，默认只支持公有仓库
   go get -v golang.org/x/tools/cmd/goimports
   ```
   
@@ -1100,4 +1103,90 @@ if err != nil {
 }
 fmt.Printf("%s\n", s)
 ```
+
+
+
+## go-micro v3 框架
+
+组件：
+
+- 注册（Registry）：提供了服务注册发现机制
+- 选择器（Selector）：能够实现负载均衡
+- 传输（Transport）：服务与服务之间通信接口
+- 代理（Broker）：提供异步通信的消息发布/订阅接口
+- 编码（Codec）：消息传输到两端时进行编码和解码
+- Server 服务端、Client 客户端
+
+技术栈使用：
+
+- 注册中心 & 配置中心
+
+  ```shell
+  # 获取consul包
+  $ go get github.com/asim/go-micro/plugins/registry/consul/v3
+  
+  # 获取config包
+  $ go get github.com/asim/go-micro/v3/config
+  $ go get github.com/asim/go-micro/plugins/config/source/consul/v3
+  ```
+  
+- 链路追踪
+
+  ```shell
+  $ go get github.com/uber/jaeger-client-go
+  $ go get github.com/asim/go-micro/plugins/wrapper/trace/opentracing/v3
+  ```
+
+- 熔断
+
+  ```shell
+  # 熔断
+  $ go get github.com/afex/hystrix-go/hystrix
+  ```
+
+- 限流
+
+  ```shell
+  # 限流
+  $ go get github.com/asim/go-micro/plugins/wrapper/ratelimiter/uber/v3
+  ```
+
+- 日志中心
+
+- 监控
+
+通过 docker-compose 搭建依赖环境：
+
+```yaml
+
+```
+
+```go
+func main() {
+	// 1. 注册中心
+	consulRegistry := consul.NewRegistry(func(options *registry.Options) {
+		options.Addrs = []string{
+			"localhost:8500",
+		}
+	})
+
+	// 创建服务
+	service := micro.NewService(
+		micro.Name("base"),
+		micro.Version("latest"),
+		micro.Registry(consulRegistry),
+	)
+
+	// 初始化服务
+	service.Init()
+
+	// 启动服务
+	if err := service.Run(); err != nil {
+		//输出启动失败信息
+		log.Fatal(err)
+	}
+}
+```
+
+
 
