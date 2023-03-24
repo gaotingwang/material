@@ -364,7 +364,7 @@ services:
     volumes: # 可选，相当于docker run里的 -v 
   # 容器2
   flask:
-  	build: # 相当于docker build 指定build content目录，及Dockerfile文件名
+    build: # 相当于docker build 指定build content目录，及Dockerfile文件名
       context: ./flask
       dockerfile: Dockerfile
     image: flask-demo:latest
