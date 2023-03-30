@@ -86,7 +86,7 @@ $ docker pull rvolosatovs/protoc
 # docker run --rm -v<some-path>:<some-path> -w<some-path> gaotingwang/protoc [OPTION] PROTO_FILES
 # --go_out=paths=import:.
 # paths参数有两个选项，分别是 import 和 source_relative，默认为 import，表示按照生成的Go代码的包的全路径去创建目录层级，source_relative 表示按照 proto源文件的目录层级去创建Go代码的目录层级，如果目录已存在则不用创建
-$ docker run --rm -v ${pwd}:/app -w /app gaotingwang/protoc -I ./ --go_out=./ --micro_out=./ ./proto/user/user.proto
+$ docker run --rm -v ${pwd}:/app -w /app gaotingwang/protoc:v3 -I ./ --go_out=./ --micro_out=./ ./proto/user/user.proto
 ```
 
 ### GORM使用介绍
@@ -558,6 +558,8 @@ func Debug(args ...interface{}) {
 ```
 
 filebeat收集日志：
+
+filebeat 下载地址：https://www.elastic.co/cn/downloads/past-releases/filebeat-7-17-9
 
 ```yaml
 # filebeat.yml
