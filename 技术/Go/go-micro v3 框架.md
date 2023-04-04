@@ -602,3 +602,67 @@ RUN ln -sf /dev/stderr /root/logs/web-server/common-error.log
 这样容器启动后就会将容器里日志传输到控制台上，而 Filebeat 也就可以收集该日志了
 
 Filebeat 官方推荐的一种收集 Docker 容器的方法，其实还有其他方案，比如说在每个容器里面安装一个 Filebeat 客户端来分别收集各自服务的日志，或者是把每个 Docker 容器的日志路径都映射到宿主机上的某个目录下面，然后在宿主机上安装一个 Filebeat 客户端来统一收集。
+
+
+
+## 开发步骤
+
+### 1. 服务端开发
+
+1. 创建初始化目录（模块名称=user）
+
+   ```shell
+   $ docker run --rm -v ${PWD}:/app -w /app micro/micro new user
+   ```
+
+2. 开发 domain - model
+
+3. 开发 domain - repository
+
+4. 开发 domain - service
+
+5. 编写proto并自动生成go代码
+
+   ```shell
+   $ docker run --rm -v ${pwd}:/app -w /app gaotingwang/protoc:v3 -I ./ --go_out=./ --micro_out=./ ./proto/user/user.proto
+   ```
+
+6. 开发 对外暴露的服务Handler
+
+   7. 编写 main.go 
+
+   8. 编译
+
+      ```sh
+      # 交叉编译
+      $ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o 替换成服务名称 *.go
+      
+      # 编写 dockerfile, 打包 docker 镜像
+      ```
+
+   9. docker运行
+
+      
+
+### 2. 开发对外暴露的接口（启动API网关）
+
+1. 初始化项目工程目录
+
+2. 编写 API proto 文件，生成go代码
+
+3. 编写对外暴露的 API 接口
+
+4. 编写 main.go
+
+5. 打包docker镜像，运行
+
+   
+
+### 3. 启动网关
+
+建立api-gateway网关：
+
+```sh
+$ docker run -d -p 8080:8080 cap1573/cap-api-gateway --registry=consul --registry_address=替换成注册中心地址:8500 api --handler=api
+```
+
