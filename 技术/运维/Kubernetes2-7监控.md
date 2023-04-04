@@ -8,6 +8,27 @@ Prometheus 相比于其他传统监控工具主要有以下几个特点：
 - 还支持通过服务发现或静态配置发现目标
 - 多种图形和仪表板支持  
 
+## 介绍
+
+监控内容：
+
+- 系统基础指标（内存、CPU、IO、Disk、Network等）
+- 服务基础信息（存活、占用系统资源等）
+- 服务个性化（接口、固定返回值）
+- 日志内容（从日志中获取报错信息）
+
+k8s中监控内容：
+
+- 节点
+- 服务
+- k8s自身的组件
+
+Prometheus数据来源：
+
+- 服务器指标来源：通过NodeExporter上报
+- 容器指标来源：通过Kubelet上报
+- 组件指标来源：ETCD（https://${host}:2379/metrics）、ApiServer（https://${host}:6443/metrics）、ControllerManger（https://${host}:10252/metrics）、Scheduler（https://${host}:10251/metrics）
+
 ## 安装部署
 
 ### 1. 准备
