@@ -117,6 +117,10 @@ Service 暴露方式：`ExternalName`、`ClusterIP`、`NodePort`、 and `LoadBal
 - LoadBalancer
 
   在使用一个集群内部IP地址和在NodePort上开放一个Service的基础上，还可以向云提供者申请一个负载均衡器，将流量转发到已经以NodePort形式开发的Service上。
+  
+- ExternalName
+
+  主要面向集群外部服务，可以把外部服务映射进集群内部，当成内部服务管理。集群内其他服务可以直接调用该名称，不直接依赖外部服务地址。
 
 ```yaml
 apiVersion: apps/v1
@@ -171,6 +175,14 @@ nginx        NodePort    10.1.245.61   <none>        80:30001/TCP   3m47s
 $ curl 192.168.56.102:30001
 ```
 
+## Service、Endpoint、Pod关系图解
+
+![](https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/kubernetes/service%E3%80%81endpoint%E3%80%81pod%E5%85%B3%E7%B3%BB.jpeg)
+
+请求过程：
+
+![](https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/kubernetes/svc%E8%AF%B7%E6%B1%82%E8%BF%87%E7%A8%8B.jpeg)
+
 ## 图解析 Pod 网络通信机制
 
 ### 同主机 Pod 网络通信
@@ -204,6 +216,8 @@ Po1 到 Pod3 的网络通信流程：
 Ingress 是对集群中服务的外部访问进行管理的 API 对象，典型的访问方式是 HTTP。
 
 Ingress-nginx 本质是网关，当请求 abc.com/service/a, Ingress 会进行响应转发到对应service，底层运行了一个 nginx。但是Kubernetes不直接使用 nginx 原因是：Kubernetes 也需要把转发的路由规则纳入它的配置管理，变成 ingress 对象，所有才有 ingress 这个资源对象。
+
+<img src="https://gtw.oss-cn-shanghai.aliyuncs.com/DevOps/kubernetes/ingress%E8%AF%B7%E6%B1%82%E6%B5%81%E7%A8%8B.jpeg" style="zoom:70%;" />
 
 Ingress 公开了从集群外部到集群内服务的 HTTP 和 HTTPS 路由，流量路由由 Ingress 资源上定义的规则控制。
 
