@@ -629,9 +629,9 @@ Filebeat 官方推荐的一种收集 Docker 容器的方法，其实还有其他
 
 6. 开发 对外暴露的服务Handler
 
-   7. 编写 main.go 
+7. 编写 main.go 
 
-   8. 编译
+8. 编译
 
       ```sh
       # 交叉编译
@@ -640,7 +640,7 @@ Filebeat 官方推荐的一种收集 Docker 容器的方法，其实还有其他
       # 编写 dockerfile, 打包 docker 镜像
       ```
 
-   9. docker运行
+9. docker运行
 
       
 
