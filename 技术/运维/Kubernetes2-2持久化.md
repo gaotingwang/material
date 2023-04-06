@@ -128,6 +128,19 @@ NAME       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM         
 pv-demo    5Gi        RWO            Recycle          Available                                                   90s
 ```
 
+PVC访问模式：
+
+- ReadWriteOnce：可读可写，单挂载
+- ReadOnlyMany：只读，多挂载
+- ReadWriteMany：可读可写，多挂载
+
+PV状态：
+
+- Available：可用
+- Bound：已分配给PVC
+- Released：PVC解绑但是还未执行回收策略
+- Failed：存储异常
+
 ### 持久卷申领
 
 表达的是用户对存储的请求，PVC 申领会耗用 PV 资源。PVC 申领可以请求特定的大小和访问模式 （例如，可以要求 PV 卷能够以 ReadWriteOnce、
