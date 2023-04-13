@@ -566,6 +566,82 @@ redefine success, size: 1
 
 [生成火焰图](https://arthas.aliyun.com/doc/profiler.html)
 
+## 常用操作汇总
+
+- 全局状态
+
+  使用 `dashboard` 命令可以概览程序的**线程、内存、GC、运行环境**信息
+
+- CPU飙高
+
+  查看5秒内的CPU使用率top n线程栈：`thread -n 3 -i 5000` 
+
+  死锁：`thread -b`
+
+- 内存升高:
+
+  `memory` 查看 JVM 内存信息
+
+  `heapdump --live /tmp/dump.hprof`   `--live`只 dump live 对象
+
+- 线上问题定位
+
+  - `sc / sm` 查看JVM已加载的类信息, 当碰到`ClassNotFoundException`之类异常,或者有的时候只记得类的部分关键词
+
+    `sc *UserController*`
+
+    `sc -d com.example.arthastest.controller.UserController`
+
+    `sm java.lang.String` 可以查看线上jvm加载类中的方法，是否和期望版本一致
+
+  - `jad` 反编译指定类的源码 , 有时候，版本发布后，代码竟然没有执行，代码是最新的吗，这时可以使用jad反编译相应的class
+
+    `jad --source-only com.example.arthastest.controller.UserController`
+
+  - watch
+
+    监测一个方法的入参和返回值，有些问题线上会出现，本地重现不了，这时这个命令就有用了
+
+    `watch com.example.arthastest.controller.UserController getUser "{params,returnObj}" -x 2`
+
+    `watch com.example.arthastest.controller.UserController getUser "{params[0],returnObj.size}" -x 2`
+
+  - tt
+
+    `watch` 虽然很方便和灵活，但需要提前想清楚观察表达式的拼写，这对排查问题而言要求太高，因为很多时候我们并不清楚问题出自于何方，只能靠蛛丝马迹进行猜测。
+
+    这个时候如果能记录下当时方法调用的每次调用的环境现场，对判断分析非常有帮助
+
+    `tt -t -n 3 com.example.arthastest.util.TestUtils returnInteger`
+
+     `-n` 参数指定需要记录的次数，当达到记录次数时 Arthas 会主动中断 `tt` 命令的记录过程，避免人工操作无法停止的情况
+
+    `tt -i 1000` 进行调用信息查看 `-p` 重新进行一次调用
+
+- 监控
+
+  1. `trace`查看方法执行时长，哪些方法耗性能，从而找出导致性能缺陷的代码
+
+     `trace com.example.arthastest.service.UserServiceImpl get`
+
+  2. 很多时候我们都知道一个方法被执行，但是有很多地方调用了它，你并不知道是谁调用了它，此时需要的是 stack 命令
+
+     `stack com.example.arthastest.service.UserServiceImpl get`
+
+- 异步任务
+
+  线上有些问题是偶然发生的，这时就需要使用异步任务，把信息写入文件
+
+  `trace com.example.arthastest.service.UserServiceImpl get > /tmp/test1.log &`
+
+  \> 将结果重写到日志文件, \& 让命令去后台运行
+
+  `stack com.example.arthastest.service.UserServiceImpl get > /tmp/test2.log &`
+
+  `jobs` 查看执行的任务
+
+  `kill id` 强制终止任务
+
 ## 退出
 
 用 `exit` 或者 `quit` 命令可以退出Arthas。 
