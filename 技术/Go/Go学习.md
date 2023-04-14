@@ -228,6 +228,24 @@ fmt.Println("*p is ", *p)
 fmt.Println(x)
 ```
 
+实战经验总结了以下几点使用指针的建议：
+
+1. 不要对 map、slice、channel 这类引用类型使用指针；
+
+    Go 语言的 map 类型本质上就是 *hmap，其他同理
+
+2. 如果需要修改方法接收者内部的数据或者状态时，需要使用指针；
+
+3. 如果需要修改参数的值或者内部数据时，也需要使用指针类型的参数；
+
+4. 如果是比较大的结构体，每次参数传递或者调用方法都要内存拷贝，内存占用多，这时候可以考虑使用指针；
+
+5. 像 int、bool 这样的小数据类型没必要使用指针；
+
+6. 如果需要并发安全，则尽可能地不要使用指针，使用指针一定要保证并发安全；
+
+7. 指针最好不要嵌套，也就是不要使用一个指向指针的指针，虽然 Go 语言允许这么做，但是这会使代码变得异常复杂。
+
 
 
 ## 面向对象
@@ -265,6 +283,9 @@ root.Right.Left = new(TreeNode)
 // 可以通过定义别名方式来扩展原有结构体的方法
 type MyNode TreeNode
 ```
+
+- new 函数只用于分配内存，并且把内存清零，也就是返回一个指向对应类型零值的指针。new 函数一般用于需要显式地返回指针的情况，不是太常用。
+- make 函数只用于 slice、chan 和 map 这三种内置类型的创建和初始化，因为这三种类型的结构比较复杂，比如 slice 要提前初始化好内部元素的类型，slice 的长度和容量等，这样才可以更好地使用它们。
 
 扩展已有类型：可以通过组合、定义别名、内嵌的方式来扩展已有类型，内嵌与继承有点类似，但不是真的继承如没有多态表示等，只是个语法糖
 
@@ -372,6 +393,8 @@ func main() {
 	fmt.Println(c, ok)
 }
 ```
+
+**不需要一个指向接口的指针，把它忘掉吧，不要让它在你的代码中出现**
 
 
 
@@ -814,6 +837,10 @@ func main() {
 }
 
 --------------- 有缓冲通道
+// 一个有缓冲 channel 具备以下特点：
+// 1. 有缓冲 channel 的内部有一个缓冲队列；
+// 2. 发送操作是向队列的尾部插入元素，如果队列已满，则阻塞等待，直到另一个 goroutine 执行，接收操作释放队列的空间；
+// 3. 接收操作是从队列的头部获取元素并把它从队列中删除，如果队列为空，则阻塞等待，直到另一个 goroutine 执行，发送操作插入新的元素。
 
 func main() {
     // 只要通道的容量大于零，那么该通道就是有缓冲的通道，通道的容量表示通道中能存放元素的数量
@@ -845,8 +872,12 @@ default:
 ```go
 finish := time.After(10 * time.Second)    // 多长时间后，返回值为channel
 tick := time.Tick(800 * time.Millisecond) // 定时器，返回值为channel
+
+// for select 循环模式非常常见
+// for 循环 +select 多路复用的并发模式，哪个 case 满足就执行哪个，直到满足一定的条件退出 for 循环
 for {
 	select {
+    // select timeout 模式的核心在于通过 time.After 函数设置一个超时时间，防止因为异常造成 select 语句的无限等待
 	case <-time.After(1000 * time.Millisecond):
 		fmt.Println("timeout")
 	case <-tick:
@@ -863,7 +894,7 @@ for {
 
 ```go
 var x int64
-var wg sync.WaitGroup // 可以等待多任务执行结束
+var wg sync.WaitGroup // 可以等待多任务执行结束，sync.RWMutex为读写锁
 var lock sync.Mutex // Go语言中使用sync包的Mutex类型来实现互斥锁
 
 func add() {
@@ -875,13 +906,66 @@ func add() {
     wg.Done() // 等待的任务完成，数量会-1
 }
 func main() {
-    wg.Add(2) // 设置等待数量
+    wg.Add(2) // 设置等待数量,即要监控的协程数
     go add()
     go add()
-    wg.Wait() // 开始等待，直到全部完成
+    wg.Wait() // 开始等待，直到计数器为0，即全部完成
     fmt.Println(x)
 }
 ```
+
+> 小技巧：使用 go build、go run、go test 这些 Go 语言工具链提供的命令时，添加 -race 标识可以帮你检查 Go 语言代码是否存在资源竞争。
+>
+
+### Context
+
+一个任务会有很多个协程协作完成，而这些协程有可能会启动更多的子协程，并且无法预知有多少层协程、每一层有多少个协程。如果因为某些原因导致任务终止了，那么它们启动的协程怎么办？该如何取消呢？因为取消这些协程可以节约内存，提升性能，同时避免不可预料的 Bug。
+
+Context 就是用来简化解决这些问题的，并且是并发安全的。Context 是一个接口，它具备手动、定时、超时发出取消信号、传值等功能，主要用于控制多个协程之间的协作，尤其是取消操作。一旦取消指令下达，那么被 Context 跟踪的这些协程都会收到取消信号，就可以做清理和退出操作。
+
+```go
+func main() {
+   wg.Add(1) 
+
+   ...
+
+   valCtx,stop:=context.WithValue(ctx,"userId",2)
+   go func() {
+      defer wg.Done()
+      getUser(valCtx)
+   }()
+
+   ...
+   stop() //发停止指令
+   wg.Wait()
+}
+
+func getUser(ctx context.Context){
+   for  {
+      select {
+      case <-ctx.Done():
+         fmt.Println("【获取用户】","协程退出")
+         return
+      default:
+         userId:=ctx.Value("userId")
+         fmt.Println("【获取用户】","用户ID为：",userId)
+         time.Sleep(1 * time.Second)
+      }
+   }
+}
+```
+
+Context 是一种非常好的工具，使用它可以很方便地控制取消多个协程。在 Go 语言标准库中也使用了它们，比如 net/http 中使用 Context 取消网络的请求。
+
+要更好地使用 Context，有一些使用原则需要尽可能地遵守。
+
+1. Context 不要放在结构体中，要以参数的方式传递。
+2. Context 作为函数的参数时，要放在第一位，也就是第一个参数。
+3. 要使用 context.Background 函数生成根节点的 Context，也就是最顶层的 Context。
+4. Context 传值要传递必须的值，而且要尽可能地少，不要什么都传。
+5. Context 多协程安全，可以在多个协程中放心使用。
+
+以上原则是规范类的，Go 语言的编译器并不会做这些检查，要靠自己遵守。
 
 
 
@@ -1105,4 +1189,88 @@ fmt.Printf("%s\n", s)
 ```
 
 
+
+## RPC
+
+在 Go SDK 中，已经内置了`net/rpc`包来帮助开发者实现 RPC。简单来说，`net/rpc` 包提供了通过网络访问服务端对象方法的能力。
+
+### 服务定义
+
+想把一个对象注册为 RPC 服务，可以让**客户端远程访问**，那么该对象（类型）的方法必须满足如下条件：
+
+- 方法的类型是可导出的（公开的）；
+
+- 方法本身也是可导出的；
+
+- 方法必须有 2 个参数，并且参数类型是可导出或者内建的；
+
+- 方法必须返回一个 error 类型。
+
+- 该方法的格式如下所示：
+
+  ```go
+  func (t *T) MethodName(argType T1, replyType *T2) error
+  ```
+
+```go
+type CrawlService struct {
+}
+
+type Args struct {
+	A, B int
+}
+
+// go 语言要求rpc方法参数，参数1：请求参数；参数2：返回结果（必须为指针类型，需要写入结果）；
+func (CrawlService) Process(args Args, result *int) error {
+	*result = args.A + args.B
+	return nil
+}
+```
+
+### 服务注册
+
+```go
+func main() {
+	err := rpc.RegisterName("CrawlService", new(CrawlService))
+	if err != nil {
+		panic(err)
+	}
+
+	listener, err := net.Listen("tcp", ":1234")
+	if err != nil {
+		panic(err)
+	}
+
+	for {
+		// 建立连接
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Printf("accept error: %v", err)
+			continue
+		}
+		// JSON RPC 跨平台通信
+        // 用 goroutine 去执行，防止阻塞for循环
+		go jsonrpc.ServeConn(conn)
+	}
+}
+```
+
+### 客户端调用
+
+```go
+func main() {
+	conn, err := net.Dial("tcp", ":1234")
+	if err != nil {
+		panic(err)
+	}
+
+	var result int
+	client := jsonrpc.NewClient(conn)
+	err = client.Call("CrawlService.Process", service.Args{A: 1, B: 2}, &result)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Printf("rpc service return result is %d", result)
+}
+```
 
