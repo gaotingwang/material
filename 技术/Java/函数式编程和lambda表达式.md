@@ -56,8 +56,25 @@ class Dog {
 - 静态方法引用
 
   ```java
-  Consumer<Dog> consumer = Dog::bark;
-  consumer.accept(dog);
+  public static void main(String[] args) {
+        Dog dog = new Dog("wang");
+        
+  //        // java7
+  //        Consumer<Dog> consumer = new Consumer<Dog>() {
+  //            @Override
+  //            public void accept(Dog dog) {
+  //                Dog.bark(dog);
+  //            }
+  //        };
+        
+  //        // lambda
+  //        // 表达式执行体只有 Dog.bark(dog1) 一个方法调用，且该方法参数与表达式入参一致
+  //        Consumer<Dog> consumer = dog1 -> Dog.bark(dog1);
+        
+        // method reference
+        Consumer<Dog> consumer = Dog::bark;
+        consumer.accept(dog);
+  }
   ```
 
 - 实例方法引用
