@@ -63,6 +63,10 @@ log.segment.bytes = 1073741824
 
 ### Producer
 
+```shell
+$ bin/kafka-console-producer.sh --bootstrap-server hadoop000:9092 --topic test05 
+```
+
 采用批量发送的方式，可以指定发送间隔`linger_ms`和每批次发送数据量`batch_size`
 
 - 异步发送
@@ -82,6 +86,10 @@ log.segment.bytes = 1073741824
 - 正好一次（1）
 
 ### Consumer
+
+```shell
+$ bin/kafka-console-consumer.sh --bootstrap-server hadoop000:9092 --topic test03 --from-beginning
+```
 
 单个分区的消息只能有ConsumerGroup中的某个Consumer消费（一个partition不能被多个consumer消费 ，但一个consumer可以消费多个partition）
 
